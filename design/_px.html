@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!-- 逐像素量一张图：把图读进 canvas，按网格取色，结果塞进 <pre id="PIXOUT">
+     用来判断「截图里右侧/底部那条空白到底存不存在、是什么颜色」。
+     跑的时候要加 --allow-file-access-from-files，否则 file:// 的图会污染 canvas。
+     用法：_px.html?src=<图片绝对路径>&cols=20&rows=30 -->
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>pixel probe</title></head>
+<body>
+<pre id="PIXOUT">loading</pre>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var src = q.get('src');
+  var cols = +(q.get('cols') || 20);
+  var rows = +(q.get('rows') || 30);
+  var img = new Image();
+  img.onload = function () {
+    var c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    var g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    var out = { size: [img.naturalWidth, img.naturalHeight], cols: cols, rows: rows, grid: [], edges: {} };
+    try {
+      var d = g.getImageData(0, 0, c.width, c.height).data;
+      function px(x, y) {
+        x = Math.max(0, Math.min(c.width - 1, Math.round(x)));
+        y = Math.max(0, Math.min(c.height - 1, Math.round(y)));
+        var i = (y * c.width + x) * 4;
+        return '#' + [d[i], d[i + 1], d[i + 2]].map(function (v) {
+          return ('0' + v.toString(16)).slice(-2);
+        }).join('');
+      }
+      out.px = px;
+      // 网格取色
+      for (var r = 0; r < rows; r++) {
+        var line = [];
+        for (var cc = 0; cc < cols; cc++) {
+          line.push(px((cc + 0.5) * c.width / cols, (r + 0.5) * c.height / rows));
+        }
+        out.grid.push(line.join(' '));
+      }
+      // 关键：右侧一列 / 底部一行的采样（看有没有异色条带）
+      out.edges.rightStrip = [0.80, 0.85, 0.90, 0.95, 0.97, 0.99].map(function (f) {
+        return f + ':' + px(c.width * f, c.height * 0.5);
+      }).join('  ');
+      out.edges.bottomStrip = [0.90, 0.94, 0.96, 0.98, 0.995].map(function (f) {
+        return f + ':' + px(c.width * 0.5, c.height * f);
+      }).join('  ');
+      out.edges.leftStrip = [0.01, 0.03, 0.06, 0.10].map(function (f) {
+        return f + ':' + px(c.width * f, c.height * 0.5);
+      }).join('  ');
+      delete out.px;
+    } catch (e) {
+      out.error = 'canvas 读不了：' + e.message;
+    }
+    document.getElementById('PIXOUT').textContent = 'PIXSTART' + JSON.stringify(out, null, 1) + 'PIXEND';
+  };
+  img.onerror = function () {
+    document.getElementById('PIXOUT').textContent = 'PIXSTART{"error":"图读不进来"}' + 'PIXEND';
+  };
+  img.src = src;
+})();
+</script>
+</body>
+</html>

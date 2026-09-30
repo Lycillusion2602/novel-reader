@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">砚读</string>
+    <string name="title_activity_main">砚读</string>
+    <string name="package_name">com.yuanchuan.yandu</string>
+    <string name="custom_url_scheme">com.yuanchuan.yandu</string>
+</resources>

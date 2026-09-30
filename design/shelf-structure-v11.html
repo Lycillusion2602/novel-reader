@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 多宝格 v11（圆润连接 + 放书位）</title>
+<style>
+:root {
+  --page: #EDEDEA; --card: #FFFFFF; --ink: #1E3D2C; --accent: #2E6B4A;
+  --muted: #9A9A95; --muted-2: #B6B9B4; --line: #E9E9E5;
+  --serif: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans); background: #DEDEDB;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  gap: 18px; padding: 24px 16px 60px;
+}
+.hint { font-size: 12.5px; color: #5F6663; text-align: center; max-width: 700px; line-height: 1.85; }
+.hint b { color: #1E3D2C; }
+.switches { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.sw {
+  border: 1px solid var(--line); background: #fff; border-radius: 9px;
+  padding: 8px 14px; font-size: 12.5px; cursor: pointer; color: var(--ink);
+  font-family: inherit;
+}
+.sw.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.phone {
+  width: 375px; height: 812px; background: var(--page);
+  border-radius: 42px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 10px #1A1E1C, 0 0 0 12px #333A36, 0 26px 56px rgba(0,0,0,.3);
+  display: flex; flex-direction: column;
+}
+.topbar { display: flex; align-items: flex-start; gap: 10px; padding: 16px 20px 0; }
+.topbar .left { flex: 1; }
+.topbar h1 {
+  font-family: var(--serif); font-size: 21px; font-weight: 600;
+  letter-spacing: 2px; color: var(--ink); line-height: 1.2;
+}
+.topbar .meta { font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: .5px; }
+.icbtn {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--card);
+  border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink); flex: none;
+}
+.icbtn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; }
+
+.stage { flex: 1; display: grid; place-items: center; }
+.bogu { width: 315px; height: 315px; display: block; overflow: visible; }
+
+.readcard {
+  margin: 0 16px; background: var(--card); border-radius: 16px;
+  padding: 12px; display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 10px rgba(30,61,44,.06);
+}
+.readcard .badge {
+  width: 42px; height: 42px; border-radius: 10px; background: var(--accent);
+  flex: none; display: grid; place-items: center; gap: 3px;
+}
+.readcard .badge i { display: block; width: 17px; height: 2px; background: rgba(255,255,255,.92); border-radius: 1px; }
+.readcard .txt { flex: 1; min-width: 0; }
+.readcard .txt b {
+  display: block; font-size: 15px; font-weight: 600; color: #22221F;
+  letter-spacing: .3px; margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.readcard .txt small { font-size: 11px; color: var(--muted); }
+.readcard .go {
+  flex: none; background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 500;
+}
+.tabbar {
+  margin: 14px 16px 18px; background: var(--card); border-radius: 999px;
+  padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(30,61,44,.06);
+}
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: var(--muted-2); flex: 1; }
+.tab.on { color: var(--accent); }
+.tab svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tab.mid { flex: none; }
+.tab.mid .plus {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--accent);
+  display: grid; place-items: center; margin-top: -14px;
+  box-shadow: 0 3px 10px rgba(46,107,74,.34);
+}
+.tab.mid .plus svg { stroke: #fff; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+
+<p class="hint">
+<b>圆润</b>：板端做圆角，每个交叉点补一个圆，直角变成圆滑过渡。<br>
+<b>放书位</b>：用极淡虚线框标出空格（自动算出来的），点下面按钮可以关掉对比。
+</p>
+
+<div class="switches">
+  <button class="sw on" id="swRound">圆润连接</button>
+  <button class="sw on" id="swSlots">放书位虚线</button>
+</div>
+
+<div class="phone">
+  <div class="topbar">
+    <div class="left">
+      <h1>砚读</h1>
+      <div class="meta">已陈列 4 本 · 摆设 3 件 · 空位 2</div>
+    </div>
+    <button class="icbtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+    <button class="icbtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+
+  <div class="stage">
+    <svg class="bogu" viewBox="0 0 400 400">
+      <defs>
+        <linearGradient id="ringG" x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset="0.5" stop-color="#F8F9F7"/>
+          <stop offset="1" stop-color="#DAE0DA"/>
+        </linearGradient>
+        <radialGradient id="backG" cx="0.4" cy="0.34" r="0.78">
+          <stop offset="0" stop-color="#DBE5DC"/>
+          <stop offset="1" stop-color="#C9D7CB"/>
+        </radialGradient>
+        <linearGradient id="plankG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset="0.62" stop-color="#FBFCFA"/>
+          <stop offset="1" stop-color="#EDF1ED"/>
+        </linearGradient>
+        <filter id="ringSh" x="-14%" y="-14%" width="128%" height="132%">
+          <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#96A79A" flood-opacity="0.42"/>
+        </filter>
+        <filter id="blur" x="-25%" y="-25%" width="150%" height="160%">
+          <feGaussianBlur stdDeviation="1.6"/>
+        </filter>
+        <clipPath id="inner"><circle cx="200" cy="200" r="168"/></clipPath>
+      </defs>
+
+      <circle cx="200" cy="200" r="177" fill="url(#ringG)" filter="url(#ringSh)"/>
+      <circle cx="200" cy="200" r="169.5" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.28"/>
+      <circle cx="200" cy="200" r="168" fill="url(#backG)"/>
+
+      <g clip-path="url(#inner)">
+        <g id="slots"></g>
+        <g filter="url(#blur)" opacity="0.42">
+          <g fill="#7E9484" transform="translate(1.7,3.4)" id="planksSh"></g>
+        </g>
+        <g fill="url(#plankG)" id="planks"></g>
+        <g fill="url(#plankG)" id="joints"></g>
+        <g fill="#FFFFFF" opacity="0.9" id="planksHi"></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="readcard">
+    <div class="badge"><i></i><i></i><i></i></div>
+    <div class="txt">
+      <b>三体·黑暗森林</b>
+      <small>刘慈欣 · 第 30/48 章 · 还剩 18 章</small>
+    </div>
+    <button class="go">继续读</button>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>我的序列</div>
+    <div class="tab"><svg viewBox="0 0 24 24"><path d="M12 5v14M8 9v10M16 9v10M4 13v6"/></svg>全部书目</div>
+    <div class="tab mid"><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><path d="M6 20V12M12 20V5M18 20v-5"/></svg>统计</div>
+    <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>我的</div>
+  </div>
+</div>
+
+<script>
+var T = 8, CX = 200, CY = 200, R = 168;
+
+var H = [
+  [ 38, 157, 192], [250, 294, 339], [ 37, 240, 250],
+  [ 78, 315, 177], [192, 131, 285], [229, 204, 366]
+];
+var V = [
+  [192,  34, 157], [285, 131, 204], [137, 157, 240], [250, 204, 294]
+];
+
+var roundOn = true, slotsOn = true;
+
+function hSpan(p) { return [Math.min(p[0], p[2]), Math.max(p[0], p[2])]; }
+function vSpan(p) { return [Math.min(p[1], p[2]), Math.max(p[1], p[2])]; }
+
+/* 是否落在任何一块板上 */
+function onPlank(x, y) {
+  for (var i = 0; i < H.length; i++) {
+    var s = hSpan(H[i]);
+    if (y >= H[i][1] - T / 2 && y <= H[i][1] + T / 2 && x >= s[0] && x <= s[1]) return true;
+  }
+  for (var j = 0; j < V.length; j++) {
+    var t = vSpan(V[j]);
+    if (x >= V[j][0] - T / 2 && x <= V[j][0] + T / 2 && y >= t[0] && y <= t[1]) return true;
+  }
+  return false;
+}
+function inCircle(x, y) {
+  var dx = x - CX, dy = y - CY;
+  return dx * dx + dy * dy <= (R - 4) * (R - 4);
+}
+
+/* 网格采样 + 连通域，自动找出空格 */
+function findSlots() {
+  var S = 4, n = Math.floor(400 / S);
+  var seen = {}, out = [];
+  function key(a, b) { return a + ',' + b; }
+  for (var a = 0; a < n; a++) {
+    for (var b = 0; b < n; b++) {
+      var gx = a * S + S / 2, gy = b * S + S / 2;
+      if (!inCircle(gx, gy) || onPlank(gx, gy)) continue;
+      if (seen[key(a, b)]) continue;
+      var q = [[a, b]], minx = 999, maxx = -999, miny = 999, maxy = -999, cnt = 0;
+      seen[key(a, b)] = 1;
+      while (q.length) {
+        var c = q.pop(), ca = c[0], cb = c[1];
+        cnt++;
+        var x = ca * S + S / 2, y = cb * S + S / 2;
+        if (x < minx) minx = x; if (x > maxx) maxx = x;
+        if (y < miny) miny = y; if (y > maxy) maxy = y;
+        var nb = [[ca + 1, cb], [ca - 1, cb], [ca, cb + 1], [ca, cb - 1]];
+        for (var k = 0; k < 4; k++) {
+          var na = nb[k][0], nbb = nb[k][1];
+          if (na < 0 || nbb < 0 || na >= n || nbb >= n) continue;
+          if (seen[key(na, nbb)]) continue;
+          var nx = na * S + S / 2, ny = nbb * S + S / 2;
+          if (!inCircle(nx, ny) || onPlank(nx, ny)) continue;
+          seen[key(na, nbb)] = 1;
+          q.push([na, nbb]);
+        }
+      }
+      var w = maxx - minx, h = maxy - miny;
+      if (cnt * S * S >= 900 && w >= 20 && h >= 20) {
+        out.push([minx, miny, w, h]);
+      }
+    }
+  }
+  return out;
+}
+
+function render() {
+  var RX = roundOn ? 3 : 1;
+  var body = '', hi = '', joints = '';
+
+  H.forEach(function (p) {
+    var s = hSpan(p), y = p[1];
+    body += '<rect x="' + s[0] + '" y="' + (y - T / 2) + '" width="' + (s[1] - s[0]) +
+            '" height="' + T + '" rx="' + RX + '"/>';
+    hi += '<rect x="' + (s[0] + 1) + '" y="' + (y - T / 2 + 0.7) + '" width="' + (s[1] - s[0] - 2) +
+          '" height="1.1" rx="0.5"/>';
+  });
+  V.forEach(function (p) {
+    var t = vSpan(p), x = p[0];
+    body += '<rect x="' + (x - T / 2) + '" y="' + t[0] + '" width="' + T +
+            '" height="' + (t[1] - t[0]) + '" rx="' + RX + '"/>';
+    hi += '<rect x="' + (x - T / 2 + 0.7) + '" y="' + (t[0] + 1) + '" width="1.1" height="' +
+          (t[1] - t[0] - 2) + '" rx="0.5"/>';
+  });
+
+  /* 交叉点补圆：让直角连接处圆滑 */
+  if (roundOn) {
+    H.forEach(function (hp) {
+      var s = hSpan(hp);
+      V.forEach(function (vp) {
+        var t = vSpan(vp);
+        if (vp[0] >= s[0] - 1 && vp[0] <= s[1] + 1 && hp[1] >= t[0] - 1 && hp[1] <= t[1] + 1) {
+          joints += '<circle cx="' + vp[0] + '" cy="' + hp[1] + '" r="' + (T * 0.82) + '"/>';
+        }
+      });
+    });
+  }
+
+  document.getElementById('planks').innerHTML = body;
+  document.getElementById('planksSh').innerHTML = body;
+  document.getElementById('joints').innerHTML = joints;
+  document.getElementById('planksHi').innerHTML = hi;
+
+  /* 放书位：极淡虚线框 */
+  var slots = '';
+  if (slotsOn) {
+    findSlots().forEach(function (r) {
+      var x = r[0] + 5, y = r[1] + 5, w = r[2] - 10, h = r[3] - 10;
+      if (w < 14 || h < 14) return;
+      slots += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+               '" height="' + h.toFixed(1) + '" rx="5" fill="none" stroke="#FFFFFF" ' +
+               'stroke-opacity="0.72" stroke-width="1.4" stroke-dasharray="5 5"/>';
+    });
+  }
+  document.getElementById('slots').innerHTML = slots;
+}
+render();
+
+document.getElementById('swRound').onclick = function () {
+  roundOn = !roundOn; this.classList.toggle('on', roundOn); render();
+};
+document.getElementById('swSlots').onclick = function () {
+  slotsOn = !slotsOn; this.classList.toggle('on', slotsOn); render();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 多宝格结构 v6</title>
+<style>
+/* ===== 配色全部取自她的截图，未做任何改动 ===== */
+:root {
+  --page: #EDEDEA;          /* 页面底：浅暖白灰 */
+  --card: #FFFFFF;
+  --ink: #1E3D2C;           /* 标题深绿 */
+  --accent: #2E6B4A;        /* 强调深绿（按钮/图标） */
+  --muted: #9A9A95;         /* 浅灰小字 */
+  --muted-2: #B6B9B4;       /* 未选中图标 */
+  --line: #E9E9E5;
+  --back: #D3DFD4;          /* 背板浅灰绿 */
+  --ring-hi: #FFFFFF;
+  --ring-lo: #DCE1DC;
+  --serif: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans);
+  background: #DEDEDB;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 18px; padding: 24px 16px 60px;
+}
+.hint {
+  font-size: 12.5px; color: #5F6663; text-align: center; max-width: 660px; line-height: 1.85;
+}
+.hint b { color: #1E3D2C; }
+
+/* ===== 手机 ===== */
+.phone {
+  width: 375px; height: 812px;
+  background: var(--page);
+  border-radius: 42px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 10px #1A1E1C, 0 0 0 12px #333A36, 0 26px 56px rgba(0,0,0,.3);
+  display: flex; flex-direction: column;
+}
+
+/* 顶部 */
+.topbar {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 16px 20px 0;
+}
+.topbar .left { flex: 1; }
+.topbar h1 {
+  font-family: var(--serif);
+  font-size: 21px; font-weight: 600; letter-spacing: 2px;
+  color: var(--ink); line-height: 1.2;
+}
+.topbar .meta {
+  font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: .5px;
+}
+.icbtn {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--line);
+  display: grid; place-items: center; color: var(--ink);
+  flex: none;
+}
+.icbtn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; }
+
+/* 中间：多宝格 */
+.stage {
+  flex: 1;
+  display: grid; place-items: center;
+  position: relative;
+}
+.bogu {
+  width: 315px; height: 315px;
+  display: block;
+  overflow: visible;
+}
+
+/* 底部卡片 */
+.readcard {
+  margin: 0 16px;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 2px 10px rgba(30,61,44,.06);
+}
+.readcard .badge {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: var(--accent); flex: none;
+  display: grid; place-items: center; gap: 3px;
+}
+.readcard .badge i {
+  display: block; width: 17px; height: 2px; background: rgba(255,255,255,.92); border-radius: 1px;
+}
+.readcard .txt { flex: 1; min-width: 0; }
+.readcard .txt b {
+  display: block; font-size: 15px; font-weight: 600; color: #22221F;
+  letter-spacing: .3px; margin-bottom: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.readcard .txt small { font-size: 11px; color: var(--muted); }
+.readcard .go {
+  flex: none; background: var(--accent); color: #fff; border: none;
+  border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 500;
+}
+
+/* 底部导航 */
+.tabbar {
+  margin: 14px 16px 18px;
+  background: var(--card);
+  border-radius: 999px;
+  padding: 9px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(30,61,44,.06);
+  position: relative;
+}
+.tab {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-size: 9.5px; color: var(--muted-2); flex: 1;
+}
+.tab.on { color: var(--accent); }
+.tab svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tab.mid { flex: none; }
+.tab.mid .plus {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--accent);
+  display: grid; place-items: center; margin-top: -14px;
+  box-shadow: 0 3px 10px rgba(46,107,74,.34);
+}
+.tab.mid .plus svg { stroke: #fff; width: 20px; height: 20px; }
+</style>
+</head>
+<body>
+
+<p class="hint">
+结构照你给的多宝格参考图重做：<b>长短不一的横板</b>咬合 <b>悬空的短撑</b>，
+隔壁两格会连成大开口，中段一根通长板分上中下三组，整体楼梯状递减。<br>
+颜色一个没动 —— 页面底、背板灰绿、白色架体、深绿强调色，全从你截图里取的。
+</p>
+
+<div class="phone">
+
+  <div class="topbar">
+    <div class="left">
+      <h1>砚读</h1>
+      <div class="meta">已陈列 4 本 · 摆设 3 件 · 空位 2</div>
+    </div>
+    <button class="icbtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+    <button class="icbtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+
+  <div class="stage">
+    <svg class="bogu" viewBox="0 0 400 400" id="bogu">
+      <defs>
+        <linearGradient id="ringG" x1="0.1" y1="0" x2="0.9" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset="0.5" stop-color="#F8F9F7"/>
+          <stop offset="1" stop-color="#DAE0DA"/>
+        </linearGradient>
+        <radialGradient id="backG" cx="0.4" cy="0.34" r="0.78">
+          <stop offset="0" stop-color="#DBE5DC"/>
+          <stop offset="1" stop-color="#C9D7CB"/>
+        </radialGradient>
+        <linearGradient id="plankG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FFFFFF"/>
+          <stop offset="0.62" stop-color="#FBFCFA"/>
+          <stop offset="1" stop-color="#EDF1ED"/>
+        </linearGradient>
+        <filter id="ringSh" x="-14%" y="-14%" width="128%" height="132%">
+          <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#96A79A" flood-opacity="0.42"/>
+        </filter>
+        <filter id="blur" x="-25%" y="-25%" width="150%" height="160%">
+          <feGaussianBlur stdDeviation="1.6"/>
+        </filter>
+        <clipPath id="inner"><circle cx="200" cy="200" r="168"/></clipPath>
+      </defs>
+
+      <!-- 圆环（有厚度，左上受光右下入影） -->
+      <circle cx="200" cy="200" r="177" fill="url(#ringG)" filter="url(#ringSh)"/>
+      <!-- 内壁阴影 -->
+      <circle cx="200" cy="200" r="169.5" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.28"/>
+      <!-- 背板 -->
+      <circle cx="200" cy="200" r="168" fill="url(#backG)"/>
+
+      <!-- 架体：先投影层，再本体层 -->
+      <g clip-path="url(#inner)">
+        <g filter="url(#blur)" opacity="0.42">
+          <g fill="#7E9484" transform="translate(1.7,3.4)" id="planksSh"></g>
+        </g>
+        <g fill="url(#plankG)" id="planks"></g>
+        <!-- 板子顶面高光 -->
+        <g fill="#FFFFFF" opacity="0.9" id="planksHi"></g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="readcard">
+    <div class="badge"><i></i><i></i><i></i></div>
+    <div class="txt">
+      <b>三体·黑暗森林</b>
+      <small>刘慈欣 · 第 30/48 章 · 还剩 18 章</small>
+    </div>
+    <button class="go">继续读</button>
+  </div>
+
+  <div class="tabbar">
+    <div class="tab on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>我的序列</div>
+    <div class="tab"><svg viewBox="0 0 24 24"><path d="M12 5v14M8 9v10M16 9v10M4 13v6"/></svg>全部书目</div>
+    <div class="tab mid"><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    <div class="tab"><svg viewBox="0 0 24 24"><path d="M6 20V12M12 20V5M18 20v-5"/></svg>统计</div>
+    <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>我的</div>
+  </div>
+</div>
+
+<script>
+var T = 7;   // 板厚
+
+/* 横板 [x1, y, x2] —— 长短不一，个别贴到圆环内壁 */
+var H = [
+  [ 60, 110, 188],   // 左上短板
+  [234, 136, 352],   // 右上板
+  [ 32, 192, 368],   // 中段通长板（贯穿，分上中下三组）
+  [ 46, 258, 172],   // 左下板
+  [238, 224, 364],   // 右下板
+  [ 98, 298, 302],   // 下层长板
+  [104, 334, 296]    // 近底托板
+];
+
+/* 竖撑 [x, y1, y2] —— 有的从半空吊下来，有的不到底 */
+var V = [
+  [ 60, 110, 172],   // 左壁立撑
+  [134, 110, 148],   // 吊下来，悬在半空
+  [234, 136, 192],   // 上接右板，下接通长板
+  [292, 136, 180],   // 吊下来，不到通长板
+  [ 96, 192, 258],   // 通长板 → 左下板
+  [172, 192, 298],   // 通长板 → 下层长板
+  [238, 192, 224],   // 短撑，接右下板
+  [300, 224, 298],   // 右下板 → 下层长板
+  [210, 298, 334]    // 下层长板 → 底托板
+];
+
+function rect(x, y, w, h) {
+  return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+         '" height="' + h.toFixed(1) + '" rx="1"/>';
+}
+function build() {
+  var body = '', hi = '';
+  H.forEach(function (p) {
+    var x = p[0], y = p[1], w = p[2] - p[0];
+    body += rect(x, y - T / 2, w, T);
+    hi += rect(x + 1, y - T / 2 + 0.7, w - 2, 1.1);          // 顶面高光
+  });
+  V.forEach(function (p) {
+    var x = p[0], y = p[1], h = p[2] - p[1];
+    body += rect(x - T / 2, y, T, h);
+    hi += rect(x - T / 2 + 0.7, y + 1, 1.1, h - 2);          // 侧面高光
+  });
+  document.getElementById('planks').innerHTML = body;
+  document.getElementById('planksSh').innerHTML = body;
+  document.getElementById('planksHi').innerHTML = hi;
+}
+build();
+</script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="xuan">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 书架形式设计稿</title>
+<style>
+:root {
+  --bg: #EDE2CE;
+  --surface: #F6EEDF;
+  --ink: #231F1C;
+  --ink-soft: #6B5F52;
+  --ink-faint: #9C8E7C;
+  --cinnabar: #9C2B26;
+  --line: rgba(35,31,28,.13);
+  --wood-a: #A8825A;
+  --wood-b: #7C5C3C;
+  --wood-edge: #5F4529;
+  --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+}
+[data-theme="mo"] {
+  --bg: #14110D;
+  --surface: #221D17;
+  --ink: #E0D5C3;
+  --ink-soft: #A2957F;
+  --ink-faint: #6E6455;
+  --cinnabar: #C0473B;
+  --line: rgba(224,213,195,.12);
+  --wood-a: #4A3A28;
+  --wood-b: #33271A;
+  --wood-edge: #221A11;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--serif);
+  background: #D9CFBB; color: var(--ink);
+  min-height: 100vh; padding: 24px 16px 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+  transition: background .3s;
+}
+[data-theme="mo"] body { background: #0A0907; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.seg { display: flex; background: #fff; border-radius: 11px; padding: 4px; gap: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+[data-theme="mo"] .seg { background: #1C1813; }
+.seg button {
+  border: none; background: none; font-family: var(--serif);
+  padding: 8px 14px; border-radius: 8px; font-size: 13px; color: #6B5F52; cursor: pointer; transition: .18s;
+}
+[data-theme="mo"] .seg button { color: #8D816F; }
+.seg button.on { background: var(--cinnabar); color: #fff; }
+.seg button:hover:not(.on) { background: rgba(0,0,0,.05); }
+[data-theme="mo"] .seg button:hover:not(.on) { background: rgba(255,255,255,.06); }
+.hint { font-size: 12.5px; color: #6B5F52; text-align: center; max-width: 680px; line-height: 1.85; }
+[data-theme="mo"] .hint { color: #8D816F; }
+
+/* ============ 手机 ============ */
+.phone {
+  width: 375px; height: 800px; background: var(--bg);
+  border-radius: 40px; overflow: hidden; position: relative; flex: none;
+  box-shadow: 0 0 0 11px #17140F, 0 0 0 13px #332E25, 0 30px 60px rgba(0,0,0,.32);
+  transition: background .3s;
+}
+.grain {
+  position: absolute; inset: 0; pointer-events: none; z-index: 3; opacity: .42;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+[data-theme="mo"] .grain { mix-blend-mode: overlay; opacity: .28; }
+.statusbar {
+  height: 46px; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 24px 7px; font-size: 12.5px; color: var(--ink); position: relative; z-index: 4; flex: none;
+}
+.screen { height: calc(100% - 46px); position: relative; overflow: hidden; }
+.page { position: absolute; inset: 0; display: none; flex-direction: column; }
+.page.on { display: flex; }
+
+/* ============ 顶部 ============ */
+.topbar { display: flex; align-items: flex-end; gap: 8px; padding: 6px 16px 10px; flex: none; }
+.brand h1 { font-size: 22px; font-weight: 600; letter-spacing: 5px; }
+.brand p { font-size: 11px; color: var(--ink-faint); letter-spacing: 1px; margin-top: 3px; }
+.brand { flex: 1; }
+.icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border: none; background: none; color: var(--ink); flex: none; }
+.icon { width: 21px; height: 21px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+.scroll { flex: 1; overflow-y: auto; padding-bottom: 90px; }
+
+/* ============ 书架结构 ============ */
+.case { padding: 4px 14px 0; }
+.row { margin-bottom: 2px; }
+.books {
+  display: flex; align-items: flex-end; gap: 3px;
+  padding: 0 6px; min-height: 132px;
+}
+/* 书脊 */
+.spine {
+  position: relative; flex: none;
+  height: 128px; border-radius: 2px 3px 3px 2px;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 9px 0 8px;
+  cursor: pointer;
+  box-shadow: inset -3px 0 6px rgba(0,0,0,.3), inset 1px 0 0 rgba(255,255,255,.14), 3px 2px 6px rgba(0,0,0,.2);
+  transition: transform .22s ease, box-shadow .22s;
+}
+.spine .sname {
+  writing-mode: vertical-rl; text-orientation: upright;
+  color: #F2E9D8; font-size: 11.5px; letter-spacing: 2.5px;
+  text-shadow: 0 1px 1px rgba(0,0,0,.35);
+  max-height: 96px; overflow: hidden;
+}
+.spine .band {
+  width: 100%; height: 3px; margin-top: auto;
+  background: rgba(255,255,255,.28);
+}
+.spine .band.top { margin: 0 0 auto; }
+.spine .dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--cinnabar); margin-top: 6px; flex: none;
+}
+.spine:hover { transform: translateY(-8px) rotate(-1.2deg); box-shadow: inset -3px 0 6px rgba(0,0,0,.3), 6px 8px 14px rgba(0,0,0,.3); }
+
+/* 平放堆叠 */
+.stack { padding: 4px 10px 6px; display: flex; flex-direction: column; gap: 2px; }
+.flat {
+  height: 21px; border-radius: 2px 4px 4px 2px;
+  display: flex; align-items: center; padding-left: 14px;
+  color: #F2E9D8; font-size: 10.5px; letter-spacing: 1.5px;
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,.28), 2px 2px 4px rgba(0,0,0,.16);
+  position: relative; cursor: pointer;
+  transition: transform .2s;
+}
+.flat::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 9px;
+  background: rgba(0,0,0,.24); border-radius: 2px 0 0 2px;
+}
+.flat:hover { transform: translateX(6px); }
+
+/* 层板 */
+.board {
+  height: 10px; margin: 0 2px;
+  background: linear-gradient(180deg, var(--wood-a), var(--wood-b) 60%, var(--wood-edge));
+  border-radius: 1px;
+  box-shadow: 0 4px 7px rgba(0,0,0,.26), inset 0 1px 0 rgba(255,255,255,.16);
+  position: relative;
+}
+.board::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: rgba(255,255,255,.1);
+}
+
+/* 层标 */
+.rowtag {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 20px 5px;
+}
+.rowtag b { font-size: 12.5px; letter-spacing: 3px; color: var(--ink-soft); font-weight: 500; }
+.rowtag .rule { flex: 1; height: 1px; background: var(--line); }
+.rowtag span { font-size: 10.5px; color: var(--ink-faint); }
+
+/* 空位提示 */
+.empty-slot {
+  flex: none; width: 34px; height: 128px;
+  border: 1px dashed var(--line); border-radius: 2px;
+  display: grid; place-items: center;
+  color: var(--ink-faint); font-size: 15px;
+}
+
+/* 继续阅读横条 */
+.now {
+  margin: 2px 20px 6px; padding: 13px 14px;
+  background: var(--surface); border: 1px solid var(--line);
+  display: flex; gap: 13px; align-items: center; border-radius: 3px;
+}
+.now .mini {
+  width: 26px; height: 92px; border-radius: 2px 3px 3px 2px; flex: none;
+  display: flex; flex-direction: column; align-items: center; padding: 6px 0;
+  box-shadow: inset -2px 0 5px rgba(0,0,0,.3);
+}
+.now .mini i { writing-mode: vertical-rl; color: #F2E9D8; font-size: 9.5px; letter-spacing: 2px; font-style: normal; }
+.now .meta { flex: 1; min-width: 0; }
+.now .meta b { font-size: 15px; display: block; margin-bottom: 4px; }
+.now .meta small { font-size: 11px; color: var(--ink-faint); display: block; margin-bottom: 8px; }
+.now .bar { height: 2px; background: var(--line); }
+.now .bar i { display: block; height: 100%; width: 62%; background: var(--cinnabar); }
+.now button {
+  background: var(--cinnabar); color: #fff; border: none;
+  padding: 8px 15px; font-size: 12.5px; font-family: var(--serif); letter-spacing: 2px; flex: none;
+}
+
+.fab {
+  position: absolute; right: 20px; bottom: 24px; width: 54px; height: 54px;
+  border-radius: 50%; background: var(--cinnabar); color: #fff;
+  display: grid; place-items: center; border: none; z-index: 5;
+  box-shadow: 0 4px 14px rgba(156,43,38,.42);
+}
+
+/* ============ 列表视图（兜底） ============ */
+.list { padding: 0 16px; }
+.lrow {
+  display: flex; gap: 13px; align-items: center;
+  background: var(--surface); border: 1px solid var(--line);
+  padding: 11px; margin-bottom: 9px; border-radius: 3px;
+}
+.lrow .mini { width: 24px; height: 58px; border-radius: 2px 3px 3px 2px; flex: none; box-shadow: inset -2px 0 4px rgba(0,0,0,.3); }
+.lrow .meta { flex: 1; min-width: 0; }
+.lrow .meta b { font-size: 14.5px; display: block; margin-bottom: 3px; }
+.lrow .meta small { font-size: 11px; color: var(--ink-faint); display: block; margin-bottom: 7px; }
+.lrow .bar { height: 2px; background: var(--line); }
+.lrow .bar i { display: block; height: 100%; background: var(--cinnabar); }
+.lrow .pct { font-size: 11px; color: var(--ink-faint); flex: none; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="seg" id="styleSeg">
+    <button class="on" data-style="mix">混合书架</button>
+    <button data-style="upright">全竖插</button>
+    <button data-style="flat">全平放</button>
+    <button data-style="list">列表</button>
+  </div>
+  <div class="seg" id="themeSeg">
+    <button class="on" data-theme="xuan">宣纸</button>
+    <button data-theme="mo">墨夜</button>
+  </div>
+</div>
+
+<p class="hint">
+书架形式：<b>木质层板 + 书脊朝外</b>，书名竖排在书脊上（中文实体书就是这样）。<br>
+书的<b>厚度按字数</b>变化，读完的盖朱砂印，最下层放平躺的线装书。点一下书会抽出。<br>
+如果觉得找书不方便，右下角保留「列表」视图兜底。
+</p>
+
+<div class="phone">
+  <div class="grain"></div>
+  <div class="statusbar"><span>17:40</span><span>❖</span></div>
+  <div class="screen">
+
+    <!-- 混合书架 -->
+    <section class="page on" id="mix">
+      <div class="topbar">
+        <div class="brand"><h1>砚读</h1><p>共 12 卷 · 已读 2</p></div>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="rowtag"><b>在　读</b><span class="rule"></span><span>继续</span></div>
+        <div class="now">
+          <div class="mini" data-h="18"><i>雪中悍刀行</i></div>
+          <div class="meta">
+            <b>雪中悍刀行</b>
+            <small>第三百四十二章 · 62%</small>
+            <div class="bar"><i></i></div>
+          </div>
+          <button>续读</button>
+        </div>
+
+        <div class="rowtag"><b>书　架</b><span class="rule"></span><span>按厚度排列</span></div>
+        <div class="case">
+          <div class="row">
+            <div class="books">
+              <div class="spine" style="width:36px" data-h="18"><span class="band top"></span><span class="sname">雪中悍刀行</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:30px" data-h="205"><span class="band top"></span><span class="sname">斗破苍穹</span><span class="band"></span></div>
+              <div class="spine" style="width:26px" data-h="42"><span class="band top"></span><span class="sname">庆余年</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:40px" data-h="268"><span class="band top"></span><span class="sname">诡秘之主</span><span class="band"></span></div>
+              <div class="spine" style="width:22px" data-h="98"><span class="band top"></span><span class="sname">明朝那些事</span><span class="band"></span></div>
+              <div class="spine" style="width:28px" data-h="150"><span class="band top"></span><span class="sname">三体</span><span class="band"></span></div>
+              <div class="empty-slot">＋</div>
+            </div>
+            <div class="board"></div>
+          </div>
+          <div class="row">
+            <div class="books">
+              <div class="spine" style="width:24px" data-h="320"><span class="band top"></span><span class="sname">活着</span><span class="band"></span></div>
+              <div class="spine" style="width:34px" data-h="64"><span class="band top"></span><span class="sname">百年孤独</span><span class="band"></span></div>
+              <div class="spine" style="width:29px" data-h="130"><span class="band top"></span><span class="sname">平凡的世界</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:21px" data-h="240"><span class="band top"></span><span class="sname">白夜行</span><span class="band"></span></div>
+              <div class="spine" style="width:32px" data-h="10"><span class="band top"></span><span class="sname">人类简史</span><span class="band"></span></div>
+            </div>
+            <div class="board"></div>
+          </div>
+          <div class="row">
+            <div class="books" style="min-height:96px">
+              <div class="stack" style="flex:1">
+                <div class="flat" data-h="18" style="width:88%">雪中悍刀行 · 全十册</div>
+                <div class="flat" data-h="205" style="width:76%">斗破苍穹 · 全八册</div>
+                <div class="flat" data-h="268" style="width:82%">诡秘之主 · 全八卷</div>
+              </div>
+            </div>
+            <div class="board"></div>
+          </div>
+        </div>
+      </div>
+      <button class="fab"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 5v14M5 12h14"/></svg></button>
+    </section>
+
+    <!-- 全竖插 -->
+    <section class="page" id="upright">
+      <div class="topbar">
+        <div class="brand"><h1>砚读</h1><p>全部竖插</p></div>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="case" style="padding-top:12px">
+          <div class="row">
+            <div class="books">
+              <div class="spine" style="width:36px" data-h="18"><span class="band top"></span><span class="sname">雪中悍刀行</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:30px" data-h="205"><span class="band top"></span><span class="sname">斗破苍穹</span><span class="band"></span></div>
+              <div class="spine" style="width:26px" data-h="42"><span class="band top"></span><span class="sname">庆余年</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:40px" data-h="268"><span class="band top"></span><span class="sname">诡秘之主</span><span class="band"></span></div>
+              <div class="spine" style="width:22px" data-h="98"><span class="band top"></span><span class="sname">明朝那些事</span><span class="band"></span></div>
+              <div class="spine" style="width:28px" data-h="150"><span class="band top"></span><span class="sname">三体</span><span class="band"></span></div>
+              <div class="spine" style="width:24px" data-h="320"><span class="band top"></span><span class="sname">活着</span><span class="band"></span></div>
+            </div>
+            <div class="board"></div>
+          </div>
+          <div class="row">
+            <div class="books">
+              <div class="spine" style="width:34px" data-h="64"><span class="band top"></span><span class="sname">百年孤独</span><span class="band"></span></div>
+              <div class="spine" style="width:29px" data-h="130"><span class="band top"></span><span class="sname">平凡的世界</span><span class="dot"></span><span class="band"></span></div>
+              <div class="spine" style="width:21px" data-h="240"><span class="band top"></span><span class="sname">白夜行</span><span class="band"></span></div>
+              <div class="spine" style="width:32px" data-h="10"><span class="band top"></span><span class="sname">人类简史</span><span class="band"></span></div>
+              <div class="spine" style="width:27px" data-h="190"><span class="band top"></span><span class="sname">红楼梦</span><span class="band"></span></div>
+              <div class="spine" style="width:23px" data-h="300"><span class="band top"></span><span class="sname">围城</span><span class="band"></span></div>
+              <div class="empty-slot">＋</div>
+            </div>
+            <div class="board"></div>
+          </div>
+        </div>
+      </div>
+      <button class="fab"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 5v14M5 12h14"/></svg></button>
+    </section>
+
+    <!-- 全平放 -->
+    <section class="page" id="flat">
+      <div class="topbar">
+        <div class="brand"><h1>砚读</h1><p>线装平放</p></div>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="case" style="padding-top:12px">
+          <div class="row">
+            <div class="books" style="min-height:112px">
+              <div class="stack" style="flex:1">
+                <div class="flat" data-h="18" style="width:88%">雪中悍刀行 · 全十册</div>
+                <div class="flat" data-h="205" style="width:76%">斗破苍穹 · 全八册</div>
+                <div class="flat" data-h="268" style="width:82%">诡秘之主 · 全八卷</div>
+                <div class="flat" data-h="42" style="width:64%">庆余年 · 全六册</div>
+              </div>
+            </div>
+            <div class="board"></div>
+          </div>
+          <div class="row">
+            <div class="books" style="min-height:112px">
+              <div class="stack" style="flex:1">
+                <div class="flat" data-h="150" style="width:58%">三体 · 全三册</div>
+                <div class="flat" data-h="98" style="width:70%">明朝那些事儿</div>
+                <div class="flat" data-h="130" style="width:80%">平凡的世界</div>
+                <div class="flat" data-h="190" style="width:66%">红楼梦 · 全四册</div>
+              </div>
+            </div>
+            <div class="board"></div>
+          </div>
+        </div>
+      </div>
+      <button class="fab"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 5v14M5 12h14"/></svg></button>
+    </section>
+
+    <!-- 列表兜底 -->
+    <section class="page" id="list">
+      <div class="topbar">
+        <div class="brand"><h1>砚读</h1><p>列表视图</p></div>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="list" style="padding-top:10px">
+          <div class="lrow"><div class="mini" data-h="18"></div><div class="meta"><b>雪中悍刀行</b><small>读到 第 342 章 · 128 万字</small><div class="bar"><i style="width:62%"></i></div></div><span class="pct">62%</span></div>
+          <div class="lrow"><div class="mini" data-h="268"></div><div class="meta"><b>诡秘之主</b><small>读到 第 87 章 · 372 万字</small><div class="bar"><i style="width:44%"></i></div></div><span class="pct">44%</span></div>
+          <div class="lrow"><div class="mini" data-h="42"></div><div class="meta"><b>庆余年</b><small>读到 第 15 章 · 98 万字</small><div class="bar"><i style="width:18%"></i></div></div><span class="pct">18%</span></div>
+          <div class="lrow"><div class="mini" data-h="205"></div><div class="meta"><b>斗破苍穹</b><small>已读完 · 533 万字</small><div class="bar"><i style="width:100%"></i></div></div><span class="pct">100%</span></div>
+          <div class="lrow"><div class="mini" data-h="98"></div><div class="meta"><b>明朝那些事儿</b><small>读到 第 3 章 · 96 万字</small><div class="bar"><i style="width:7%"></i></div></div><span class="pct">7%</span></div>
+          <div class="lrow"><div class="mini" data-h="130"></div><div class="meta"><b>平凡的世界</b><small>读到 第 44 章 · 104 万字</small><div class="bar"><i style="width:31%"></i></div></div><span class="pct">31%</span></div>
+        </div>
+      </div>
+      <button class="fab"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 5v14M5 12h14"/></svg></button>
+    </section>
+
+  </div>
+</div>
+
+<script>
+function bindSeg(id, key, fn) {
+  document.getElementById(id).addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(this.children, function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    fn(b.dataset[key]);
+  });
+}
+bindSeg('styleSeg', 'style', function (s) {
+  document.querySelectorAll('.page').forEach(function (p) { p.classList.toggle('on', p.id === s); });
+});
+bindSeg('themeSeg', 'theme', function (t) { document.documentElement.setAttribute('data-theme', t); });
+
+// 按书名取稳定的布面色
+document.querySelectorAll('.spine, .flat, .mini').forEach(function (el) {
+  var h = el.dataset.h !== undefined ? +el.dataset.h : 20;
+  el.style.background = 'linear-gradient(160deg, hsl(' + h + ' 27% 35%), hsl(' + ((h + 20) % 360) + ' 30% 21%))';
+});
+
+// 点书抽出
+document.querySelectorAll('.spine').forEach(function (sp) {
+  sp.addEventListener('click', function () {
+    this.style.transform = this.style.transform ? '' : 'translateY(-16px) rotate(-2.5deg)';
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="xuan">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 设计稿 v2 宣纸竖排</title>
+<style>
+/* ============ 主题 ============ */
+:root {
+  --bg: #EFE4D0;
+  --bg-2: #E5D8C0;
+  --surface: #F6EEDF;
+  --ink: #231F1C;
+  --ink-soft: #6B5F52;
+  --ink-faint: #9C8E7C;
+  --cinnabar: #9C2B26;
+  --cinnabar-soft: rgba(156,43,38,.1);
+  --jade: #4A6B5D;
+  --line: rgba(35,31,28,.13);
+  --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+}
+[data-theme="mo"] {
+  --bg: #14110D;
+  --bg-2: #1C1813;
+  --surface: #221D17;
+  --ink: #E0D5C3;
+  --ink-soft: #A2957F;
+  --ink-faint: #6E6455;
+  --cinnabar: #C0473B;
+  --cinnabar-soft: rgba(192,71,59,.14);
+  --jade: #7A9A87;
+  --line: rgba(224,213,195,.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--serif);
+  background: #D9CFBB;
+  color: var(--ink);
+  min-height: 100vh;
+  padding: 26px 16px 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  transition: background .3s;
+}
+[data-theme="mo"] body { background: #0A0907; }
+
+/* ============ 演示控制 ============ */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 780px; }
+.seg { display: flex; background: #fff; border-radius: 11px; padding: 4px; gap: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+[data-theme="mo"] .seg { background: #1C1813; }
+.seg button {
+  border: none; background: none; font-family: var(--serif);
+  padding: 8px 14px; border-radius: 8px; font-size: 13px;
+  color: #6B5F52; cursor: pointer; transition: .18s;
+}
+[data-theme="mo"] .seg button { color: #8D816F; }
+.seg button.on { background: var(--cinnabar); color: #fff; }
+.seg button:hover:not(.on) { background: rgba(0,0,0,.05); }
+[data-theme="mo"] .seg button:hover:not(.on) { background: rgba(255,255,255,.06); }
+.hint { font-size: 12.5px; color: #6B5F52; text-align: center; max-width: 660px; line-height: 1.8; }
+[data-theme="mo"] .hint { color: #8D816F; }
+
+/* ============ 手机 ============ */
+.phone {
+  width: 375px; height: 790px;
+  background: var(--bg);
+  border-radius: 40px;
+  box-shadow: 0 0 0 11px #17140F, 0 0 0 13px #332E25, 0 30px 60px rgba(0,0,0,.32);
+  overflow: hidden; position: relative; flex: none;
+  transition: background .3s;
+}
+.grain {
+  position: absolute; inset: 0; pointer-events: none; z-index: 1; opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+[data-theme="mo"] .grain { mix-blend-mode: overlay; opacity: .3; }
+
+.statusbar {
+  height: 46px; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 24px 7px; font-size: 12.5px; color: var(--ink); position: relative; z-index: 2; flex: none;
+}
+.screen { height: calc(100% - 46px); position: relative; overflow: hidden; }
+.page { position: absolute; inset: 0; display: none; flex-direction: column; }
+.page.on { display: flex; }
+
+/* ============ 通用 ============ */
+.icon { width: 21px; height: 21px; stroke: currentColor; stroke-width: 1.6; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; color: var(--ink); flex: none; border: none; background: none; }
+
+/* 印章 */
+.seal {
+  display: inline-grid; place-items: center;
+  background: var(--cinnabar); color: #fff;
+  font-size: 10px; line-height: 1.15; letter-spacing: 1px;
+  padding: 4px 5px; border-radius: 3px;
+  writing-mode: vertical-rl;
+  font-weight: 600;
+}
+
+/* ============ 书架 ============ */
+.topbar { display: flex; align-items: flex-end; gap: 8px; padding: 6px 16px 14px; flex: none; }
+.brand { flex: 1; }
+.brand h1 { font-size: 23px; font-weight: 600; letter-spacing: 4px; }
+.brand p { font-size: 11.5px; color: var(--ink-faint); letter-spacing: 1px; margin-top: 3px; }
+.scroll { flex: 1; overflow-y: auto; padding-bottom: 96px; }
+
+.sec {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px 10px;
+}
+.sec b { font-size: 14px; letter-spacing: 2px; font-weight: 600; }
+.sec .rule { flex: 1; height: 1px; background: var(--line); }
+.sec span { font-size: 11px; color: var(--ink-faint); }
+
+/* 线装书封面 */
+.shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px 13px; padding: 0 20px; }
+.book .cover {
+  position: relative; width: 100%; aspect-ratio: 3/4.2;
+  border-radius: 3px 5px 5px 3px;
+  overflow: hidden;
+  box-shadow: 2px 3px 8px rgba(35,31,28,.22), inset -1px 0 0 rgba(0,0,0,.15);
+}
+.book .cover::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 7px;
+  background: linear-gradient(90deg, rgba(0,0,0,.34), rgba(0,0,0,.05));
+}
+.book .frame {
+  position: absolute; inset: 7px 8px 7px 14px;
+  border: 1px solid rgba(255,255,255,.42);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: 9px 0;
+}
+.book .vname {
+  writing-mode: vertical-rl;
+  color: #F7F1E4; font-size: 14px; letter-spacing: 2.5px;
+  font-weight: 500; line-height: 1.25;
+  max-height: 100%;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.book .cover .done-seal {
+  position: absolute; right: 7px; bottom: 7px;
+}
+.book b {
+  display: block; font-size: 12px; font-weight: 400; margin-top: 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft);
+}
+.book .prog { height: 2px; background: var(--line); margin-top: 5px; }
+.book .prog i { display: block; height: 100%; background: var(--cinnabar); }
+
+/* 继续阅读：横条 */
+.now {
+  margin: 0 20px 4px; padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  display: flex; gap: 14px; align-items: center;
+}
+.now .cover { width: 52px; aspect-ratio: 3/4.2; flex: none; }
+.now .meta { flex: 1; min-width: 0; }
+.now .meta b { font-size: 15.5px; display: block; margin-bottom: 5px; }
+.now .meta small { font-size: 11.5px; color: var(--ink-faint); display: block; margin-bottom: 9px; }
+.now .bar { height: 2px; background: var(--line); }
+.now .bar i { display: block; height: 100%; width: 62%; background: var(--cinnabar); }
+.now button {
+  background: var(--cinnabar); color: #fff; border: none;
+  border-radius: 2px; padding: 8px 16px; font-size: 13px;
+  font-family: var(--serif); letter-spacing: 2px; flex: none;
+}
+
+/* 悬浮导入：朱砂圆印 */
+.fab {
+  position: absolute; right: 20px; bottom: 24px;
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--cinnabar); color: #fff;
+  display: grid; place-items: center; border: none;
+  box-shadow: 0 4px 14px rgba(156,43,38,.42);
+  z-index: 5;
+}
+
+/* ============ 阅读页 ============ */
+.rbar {
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 10px 8px; flex: none;
+  border-bottom: 1px solid var(--line);
+}
+.rbar .t { flex: 1; text-align: center; font-size: 12px; color: var(--ink-soft); letter-spacing: 1px; }
+
+/* 竖排正文 */
+.vbody {
+  flex: 1; overflow-x: auto; overflow-y: hidden;
+  padding: 26px 18px;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+.vbody h2 {
+  font-size: 19px; letter-spacing: 3px; font-weight: 600;
+  margin-left: 20px; padding-top: 4px;
+}
+.vbody p {
+  font-size: 16.5px; line-height: 2; letter-spacing: 1.5px;
+  margin-left: 12px; text-indent: 1em;
+}
+/* 横排正文 */
+.hbody {
+  flex: 1; overflow-y: auto; padding: 14px 24px 40px;
+}
+.hbody h2 { font-size: 20px; letter-spacing: 2px; margin-bottom: 18px; font-weight: 600; }
+.hbody p { font-size: 16.5px; line-height: 2; text-indent: 2em; margin-bottom: 13px; letter-spacing: .5px; }
+
+/* 注音 */
+ruby { ruby-align: center; }
+rt { font-size: .42em; color: var(--cinnabar); font-weight: 400; letter-spacing: 0; }
+.tap-word { color: var(--cinnabar); border-bottom: 1px dotted var(--cinnabar); }
+
+/* 鱼尾页码 */
+.fishtail {
+  text-align: center; color: var(--ink-faint);
+  font-size: 11px; letter-spacing: 3px; padding: 10px 0; flex: none;
+  border-top: 1px solid var(--line);
+}
+.fishtail::before { content: '❖ '; color: var(--cinnabar); }
+.fishtail::after { content: ' ❖'; color: var(--cinnabar); }
+
+.rfoot {
+  display: flex; align-items: center; justify-content: space-around;
+  padding: 9px 14px 12px; flex: none;
+}
+.rfoot button {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 10.5px; color: var(--ink-soft);
+  background: none; border: none; font-family: var(--serif);
+}
+.rfoot button.on { color: var(--cinnabar); }
+
+/* 手势提示条 */
+.gesture-tip {
+  position: absolute; left: 0; right: 0; bottom: 92px;
+  display: flex; justify-content: space-between;
+  padding: 0 18px; font-size: 10px; color: var(--ink-faint);
+  pointer-events: none; z-index: 4;
+}
+
+/* ============ 目录 ============ */
+.thead {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 14px 12px; border-bottom: 1px solid var(--line); flex: none;
+}
+.thead b { flex: 1; font-size: 15.5px; letter-spacing: 3px; }
+.thead small { font-size: 11.5px; color: var(--ink-faint); }
+.tlist { flex: 1; overflow-y: auto; }
+.tmark {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 20px; background: var(--cinnabar-soft);
+  color: var(--cinnabar); font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+.tmark .x { margin-left: auto; color: var(--ink-faint); font-size: 17px; }
+.titem {
+  padding: 12px 20px; font-size: 13.5px;
+  border-bottom: 1px solid var(--line);
+  display: flex; justify-content: space-between; gap: 10px;
+}
+.titem.on { background: var(--cinnabar-soft); color: var(--cinnabar); font-weight: 600; }
+.titem span:last-child { color: var(--ink-faint); font-size: 11px; flex: none; }
+
+/* ============ 设置 ============ */
+.mask { position: absolute; inset: 0; background: rgba(0,0,0,.42); z-index: 6; }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 7;
+  background: var(--surface); border-radius: 4px 4px 0 0;
+  padding: 12px 20px 26px; max-height: 74%; overflow-y: auto;
+  border-top: 2px solid var(--cinnabar);
+}
+.sheet h3 {
+  font-size: 13px; letter-spacing: 4px; text-align: center;
+  color: var(--ink-soft); margin-bottom: 14px; font-weight: 500;
+}
+.grp {
+  border: 1px solid var(--line); border-radius: 3px;
+  padding: 2px 14px; margin-bottom: 13px; background: var(--bg);
+}
+.line2 {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.line2:last-child { border-bottom: none; }
+.line2 label { font-size: 13.5px; width: 58px; flex: none; letter-spacing: 1px; }
+.line2 .v { font-size: 12.5px; color: var(--ink-soft); min-width: 40px; text-align: center; }
+.step { display: flex; align-items: center; gap: 9px; flex: 1; }
+.step button {
+  width: 34px; height: 30px; border: 1px solid var(--line);
+  border-radius: 2px; background: var(--surface); color: var(--ink); font-size: 14px;
+  font-family: var(--serif);
+}
+.chips2 { display: flex; gap: 7px; flex: 1; flex-wrap: wrap; }
+.chip2 {
+  border: 1px solid var(--line); background: var(--surface);
+  border-radius: 2px; padding: 6px 13px; font-size: 12.5px;
+  color: var(--ink); font-family: var(--serif);
+}
+.chip2.on { background: var(--cinnabar); color: #fff; border-color: var(--cinnabar); }
+input[type=range] { flex: 1; accent-color: var(--cinnabar); }
+.sw2 { width: 30px; height: 30px; border-radius: 2px; border: 2px solid transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.sw2.on { border-color: var(--cinnabar); }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="seg" id="pageSeg">
+    <button class="on" data-page="shelf">书架</button>
+    <button data-page="reader">阅读页</button>
+    <button data-page="toc">目录</button>
+    <button data-page="settings">设置</button>
+  </div>
+  <div class="seg" id="orientSeg">
+    <button class="on" data-orient="v">竖排</button>
+    <button data-orient="h">横排</button>
+  </div>
+  <div class="seg" id="themeSeg">
+    <button class="on" data-theme="xuan">宣纸</button>
+    <button data-theme="mo">墨夜</button>
+  </div>
+</div>
+
+<p class="hint">
+这次的设计主张：<b>把中文古籍的阅读方式装进手机</b>。<br>
+① 真·竖排右起（可切横排）　② 线装书封面　③ 宣纸做旧纹理 + 朱砂红　④ 生僻字注音（点字出拼音）　⑤ 鱼尾页码　⑥ 左右半屏上下滑直接调亮度/字号
+</p>
+
+<div class="phone">
+  <div class="grain"></div>
+  <div class="statusbar"><span>17:28</span><span>❖</span></div>
+
+  <div class="screen">
+
+    <!-- 书架 -->
+    <section class="page on" id="shelf">
+      <div class="topbar">
+        <div class="brand">
+          <h1>砚读</h1>
+          <p>宣纸竖排 · 离线不联网</p>
+        </div>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="sec"><b>在读</b><span class="rule"></span><span>继续</span></div>
+        <div class="now">
+          <div class="cover" data-h="18" style="border-radius:3px 5px 5px 3px;position:relative;box-shadow:2px 3px 8px rgba(35,31,28,.22)">
+            <div class="frame" style="position:absolute;inset:7px 8px 7px 13px;border:1px solid rgba(255,255,255,.42);display:flex;justify-content:center;padding:6px 0">
+              <div style="writing-mode:vertical-rl;color:#F7F1E4;font-size:10px;letter-spacing:2px">雪中悍刀行</div>
+            </div>
+          </div>
+          <div class="meta">
+            <b>雪中悍刀行</b>
+            <small>第三百四十二章 · 读到 62%</small>
+            <div class="bar"><i></i></div>
+          </div>
+          <button>续读</button>
+        </div>
+
+        <div class="sec"><b>书架</b><span class="rule"></span><span>12 卷</span></div>
+        <div class="shelf">
+          <div class="book"><div class="cover" data-h="18"><div class="frame"><div class="vname">雪中悍刀行</div></div></div><b>62%</b><div class="prog"><i style="width:62%"></i></div></div>
+          <div class="book"><div class="cover" data-h="205"><div class="frame"><div class="vname">斗破苍穹</div></div><div class="done-seal"><span class="seal">已读</span></div></div><b>读完</b><div class="prog"><i style="width:100%"></i></div></div>
+          <div class="book"><div class="cover" data-h="42"><div class="frame"><div class="vname">庆余年</div></div></div><b>18%</b><div class="prog"><i style="width:18%"></i></div></div>
+          <div class="book"><div class="cover" data-h="268"><div class="frame"><div class="vname">诡秘之主</div></div></div><b>44%</b><div class="prog"><i style="width:44%"></i></div></div>
+          <div class="book"><div class="cover" data-h="98"><div class="frame"><div class="vname">明朝那些事</div></div></div><b>7%</b><div class="prog"><i style="width:7%"></i></div></div>
+          <div class="book"><div class="cover" data-h="150"><div class="frame"><div class="vname">三体</div></div><div class="done-seal"><span class="seal">已读</span></div></div><b>读完</b><div class="prog"><i style="width:100%"></i></div></div>
+        </div>
+      </div>
+      <button class="fab"><svg class="icon" viewBox="0 0 24 24" style="width:24px;height:24px"><path d="M12 5v14M5 12h14"/></svg></button>
+    </section>
+
+    <!-- 阅读页 -->
+    <section class="page" id="reader">
+      <div class="rbar">
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <span class="t" id="rTitle">雪中悍刀行</span>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="19" r="1.3"/></svg></button>
+      </div>
+
+      <div class="vbody" id="vBody">
+        <h2>第三百四十二章　山雨欲来</h2>
+        <p>徐凤年收回望向窗外的视线，手指在桌面上轻轻叩了两下。屋外雨势渐大，打在青瓦上噼啪作响，像是有谁在屋顶上急匆匆地赶路。</p>
+        <p>老掌柜端着酒壶进来，见他这副模样，也不敢多嘴，放下酒便退了出去。门合上的时候，带进一线湿冷的风，烛火晃了晃。</p>
+        <p>「来了？」徐凤年头也不抬。</p>
+        <p>阴影里有人低声应道：「世子，北凉的老卒，已经在城外三十里扎营了。」他口中说的，是那支<ruby>骁<rt>xiāo</rt></ruby>骑。</p>
+        <p>他嗯了一声，端起酒杯，却没有喝。杯中酒液映着烛光，微微<ruby>晃<rt>huàng</rt></ruby>荡。过了许久，他才缓缓开口：「告诉他们，再等等。」</p>
+        <p>窗外一道闪电劈下，把整间屋子照得雪亮。那一瞬间，桌上的地图、未写完的信、还有搁在角落里的那柄刀，都清清楚楚地显露出来，随即又被黑暗吞没。</p>
+      </div>
+
+      <div class="hbody" id="hBody" style="display:none">
+        <h2>第三百四十二章　山雨欲来</h2>
+        <p>徐凤年收回望向窗外的视线，手指在桌面上轻轻叩了两下。屋外雨势渐大，打在青瓦上噼啪作响，像是有谁在屋顶上急匆匆地赶路。</p>
+        <p>老掌柜端着酒壶进来，见他这副模样，也不敢多嘴，放下酒便退了出去。门合上的时候，带进一线湿冷的风，烛火晃了晃。</p>
+        <p>「来了？」徐凤年头也不抬。</p>
+        <p>阴影里有人低声应道：「世子，北凉的老卒，已经在城外三十里扎营了。」他口中说的，是那支<ruby>骁<rt>xiāo</rt></ruby>骑。</p>
+        <p>他嗯了一声，端起酒杯，却没有喝。杯中酒液映着烛光，微微<ruby>晃<rt>huàng</rt></ruby>荡。过了许久，他才缓缓开口：「告诉他们，再等等。」</p>
+        <p>窗外一道闪电劈下，把整间屋子照得雪亮。那一瞬间，桌上的地图、未写完的信、还有搁在角落里的那柄刀，都清清楚楚地显露出来，随即又被黑暗吞没。</p>
+      </div>
+
+      <div class="gesture-tip" id="gTip">
+        <span>◤ 上下滑调亮度</span><span>调字号 上下滑 ◥</span>
+      </div>
+
+      <div class="fishtail">第 342 章 · 共 1024 章</div>
+
+      <div class="rfoot">
+        <button><svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>目录</button>
+        <button class="on"><svg class="icon" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg>书签</button>
+        <button id="btnOrient"><svg class="icon" viewBox="0 0 24 24"><path d="M7 4v16M7 4l-3 3M7 4l3 3M17 20V4M17 20l3-3M17 20l-3-3"/></svg>横排</button>
+        <button><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M19 12a7 7 0 00-.1-1.1l2-1.5-2-3.4-2.3 1a7 7 0 00-1.9-1.1L14.4 3H9.6l-.3 2.9a7 7 0 00-1.9 1.1l-2.3-1-2 3.4 2 1.5A7 7 0 005 12c0 .4 0 .7.1 1.1l-2 1.5 2 3.4 2.3-1a7 7 0 001.9 1.1l.3 2.9h4.8l.3-2.9a7 7 0 001.9-1.1l2.3 1 2-3.4-2-1.5c.1-.4.1-.7.1-1.1z"/></svg>设置</button>
+      </div>
+    </section>
+
+    <!-- 目录 -->
+    <section class="page" id="toc">
+      <div class="thead">
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <b>目　录</b>
+        <small>共 1024 章</small>
+      </div>
+      <div class="tlist">
+        <div class="tmark">
+          <svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M6 3h12v18l-6-4-6 4z"/></svg>
+          朱批 · 第三百四十二章
+          <span class="x">×</span>
+        </div>
+        <div class="titem"><span>第三百四十章　雪夜</span><span>4.2k</span></div>
+        <div class="titem"><span>第三百四十一章　故人</span><span>3.8k</span></div>
+        <div class="titem on"><span>第三百四十二章　山雨欲来</span><span>4.6k</span></div>
+        <div class="titem"><span>第三百四十三章　铁骑</span><span>4.1k</span></div>
+        <div class="titem"><span>第三百四十四章　烽火</span><span>3.9k</span></div>
+        <div class="titem"><span>第三百四十五章　城破</span><span>5.2k</span></div>
+        <div class="titem"><span>第三百四十六章　归途</span><span>4.4k</span></div>
+        <div class="titem"><span>第三百四十七章　斩将</span><span>4.0k</span></div>
+      </div>
+    </section>
+
+    <!-- 设置 -->
+    <section class="page" id="settings">
+      <div class="rbar">
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <span class="t">第三百四十二章　山雨欲来</span>
+      </div>
+      <div class="vbody" style="opacity:.3">
+        <h2>第三百四十二章　山雨欲来</h2>
+        <p>徐凤年收回望向窗外的视线，手指在桌面上轻轻叩了两下。</p>
+      </div>
+      <div class="mask"></div>
+      <div class="sheet">
+        <h3>排　版</h3>
+        <div class="grp">
+          <div class="line2"><label>字号</label><div class="step"><button>−</button><span class="v">16.5</span><button>＋</button></div></div>
+          <div class="line2"><label>行距</label><div class="step"><button>−</button><span class="v">2.0</span><button>＋</button></div></div>
+          <div class="line2"><label>字体</label><div class="chips2"><button class="chip2 on">宋体</button><button class="chip2">楷体</button><button class="chip2">黑体</button></div></div>
+          <div class="line2"><label>版式</label><div class="chips2"><button class="chip2 on">竖排</button><button class="chip2">横排</button><button class="chip2">简繁</button></div></div>
+        </div>
+        <div class="grp">
+          <div class="line2"><label>纸色</label><div class="chips2">
+            <button class="sw2 on" style="background:#EFE4D0"></button>
+            <button class="sw2" style="background:#14110D"></button>
+            <button class="sw2" style="background:#DDE6DA"></button>
+            <button class="sw2" style="background:#E8DCC8"></button>
+          </div></div>
+          <div class="line2"><label>亮度</label><input type="range" min="20" max="100" value="100"></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+function bindSeg(id, attr, fn) {
+  document.getElementById(id).addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(this.children, function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    fn(b.dataset[attr]);
+  });
+}
+bindSeg('pageSeg', 'page', function (p) {
+  document.querySelectorAll('.page').forEach(function (x) { x.classList.toggle('on', x.id === p); });
+});
+bindSeg('themeSeg', 'theme', function (t) { document.documentElement.setAttribute('data-theme', t); });
+
+function setOrient(mode) {
+  var v = document.getElementById('vBody');
+  var h = document.getElementById('hBody');
+  var tip = document.getElementById('gTip');
+  if (mode === 'v') {
+    v.style.display = ''; h.style.display = 'none'; tip.style.display = '';
+    document.getElementById('btnOrient').lastChild.textContent = '横排';
+  } else {
+    v.style.display = 'none'; h.style.display = ''; tip.style.display = 'none';
+    document.getElementById('btnOrient').lastChild.textContent = '竖排';
+  }
+}
+bindSeg('orientSeg', 'orient', setOrient);
+document.getElementById('btnOrient').addEventListener('click', function () {
+  var to = document.getElementById('vBody').style.display === 'none' ? 'v' : 'h';
+  setOrient(to);
+  var seg = document.getElementById('orientSeg');
+  Array.prototype.forEach.call(seg.children, function (x) {
+    x.classList.toggle('on', x.dataset.orient === to);
+  });
+});
+
+// 线装书封面配色：按书名取稳定色相
+function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+document.querySelectorAll('.book .cover, .now .cover').forEach(function (el) {
+  var name = el.querySelector('.vname');
+  var h = el.dataset.h !== undefined ? +el.dataset.h : hash(name ? name.textContent : 'x') % 360;
+  // 中式布面：低饱和深色，偏黛青/绛紫/赭石
+  el.style.background = 'linear-gradient(155deg, hsl(' + h + ' 26% 34%), hsl(' + ((h + 22) % 360) + ' 30% 22%))';
+});
+</script>
+</body>
+</html>

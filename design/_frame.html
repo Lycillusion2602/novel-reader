@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- 把 phone-sim 装进一个固定 390×844 的框里截图用。
+     headless 浏览器会忽略 --window-size，所以用 iframe 自己钉死尺寸。 -->
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>phone frame</title>
+<style>
+  html, body { margin: 0; background: #2b2f2d; }
+  #phone {
+    width: 390px; height: 844px; border: 0; display: block;
+    margin: 0; background: #fff;
+  }
+</style>
+</head>
+<body>
+<iframe id="phone" src="phone-sim.html?n=12&on=5"></iframe>
+<script>
+  var q = new URLSearchParams(location.search);
+  var p = q.get('p');
+  if (p) document.getElementById('phone').src = 'phone-sim.html?' + p;
+</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#f5f2ea">
+<title>砚读 · 离线小说</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ 书架 ============ -->
+<section id="page-shelf" class="page active">
+  <header class="shelf-head">
+    <div>
+      <h1>砚读</h1>
+      <p class="shelf-sub" id="shelf-sub">离线小说阅读器</p>
+    </div>
+    <button id="btn-edit" class="btn-ghost">编辑</button>
+  </header>
+
+  <!-- 架子自己撑满剩下的高度（svg 会按比例缩放到能放下的最大尺寸），
+       下面的提示跟着架子走，不再另开一块空状态跟它抢地方 -->
+  <div class="shelf-stage">
+    <!-- 继续阅读：夹在书架上的一张便签。左边那根竖条是这本书在架子上的书脊色，
+         没读过任何书时整条 display:none，完全不占位 —— 架子照旧居中。 -->
+    <button class="continue-card" id="btn-continue" style="display:none">
+      <i class="cc-spine" id="cc-spine"></i>
+      <span class="cc-main">
+        <span class="cc-name" id="cc-name"></span>
+        <span class="cc-sub" id="cc-sub"></span>
+      </span>
+      <span class="cc-go">续读 ›</span>
+      <span class="cc-bar"><i id="cc-bar"></i></span>
+    </button>
+    <div class="shelf-canvas" id="shelf-stage"></div>
+    <div id="shelf-tip" class="shelf-tip"></div>
+    <button class="roster-btn" id="btn-roster" style="display:none">花名册</button>
+  </div>
+
+  <div id="edit-bar" class="edit-bar">
+    <span id="edit-bar-text">点虚线框加书，点书移除</span>
+    <div class="edit-acts">
+      <button class="pill sm" id="btn-fill">一键摆满</button>
+      <button class="pill sm" id="btn-clear">清空</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 书库列表 ============ -->
+<section id="page-list" class="page">
+  <header class="list-head">
+    <h1>书库</h1>
+    <button id="btn-list-import" class="btn-ghost">+ 导入</button>
+  </header>
+
+  <div class="search-box">
+    <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/>
+    </svg>
+    <input id="search-input" type="search" placeholder="搜索书名" autocomplete="off">
+    <button id="search-clear" class="search-clear" aria-label="清空">×</button>
+  </div>
+
+  <div id="list-body" class="list-body"></div>
+  <div id="list-empty" class="empty" style="display:none"></div>
+</section>
+
+<!-- ============ 阅读 ============ -->
+<section id="page-reader" class="page">
+  <!-- 顶栏：左边「返回」，右边「更多」。
+       「更多」是留给以后扩展的入口，现在按下只是给个提示。 -->
+  <div class="reader-head" id="reader-head">
+    <button id="btn-back" class="rd-back">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+           stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg>
+      <span>返回</span>
+    </button>
+    <div class="reader-title" id="reader-title">　</div>
+    <button id="btn-more" class="rd-more">
+      <svg viewBox="0 0 24 24" fill="currentColor" class="dots">
+        <circle cx="12" cy="5.6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18.4" r="1.5"/>
+      </svg>
+      <span>更多</span>
+    </button>
+  </div>
+
+  <!-- 整本书在这里读成一条连续的长书页：
+       #chapter-content 里挂的是若干 .chapter-block（一章一块，标题跟着自己那一块走），
+       滑到哪就在头尾接着补一节，离得远的卸掉 —— 所以这里不再有"翻章"这回事。
+       ⚠️ 章节标题以前是这儿孤零零的一个 h2，一条卷轴里放不下第二个，第二章就没名字了。 -->
+  <div class="reader-body" id="reader-body">
+    <div class="chapter-content" id="chapter-content"></div>
+  </div>
+
+  <!-- 页尾遮罩（只在分页模式下出现）：
+       内容是一条连续的长书页，所以"下一页的第一段"总会在页底露出个开头。
+       这条跟背景同色的块从"本页最后一段的底"一直盖到屏幕底，页尾就干净了 ——
+       纸质书的页尾留白就是这个观感。它在栏下面（z-index 比栏小），不吃点击。 -->
+  <div class="page-tail" id="page-tail"></div>
+
+  <!-- 底栏分两段：
+       上段 = 当前章节标题 + 「上一章 / 进度条 / 下一章」
+       下段 = 四个带文字的功能键：目录 / 夜间 / 亮度 / 设置
+       ⚠️ 整条底栏是浮在正文上的（absolute），显示隐藏只动 transform + opacity，
+          正文的 padding 一次都不改 —— 见 CSS 里那段"v-show 而不是 v-if"。 -->
+  <div class="reader-foot" id="reader-foot">
+    <div class="foot-chap">
+      <div class="fc-title" id="fc-title">　</div>
+      <div class="fc-row">
+        <button class="fc-btn" id="btn-prev">上一章</button>
+        <div class="fc-bar" id="fc-bar" role="slider" aria-label="章节进度">
+          <i class="fc-dot" id="fc-dot"></i>
+        </div>
+        <button class="fc-btn" id="btn-next">下一章</button>
+      </div>
+    </div>
+    <div class="foot-menu">
+      <button class="fm-btn" id="btn-toc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <span>目录</span>
+      </button>
+      <button class="fm-btn" id="btn-night">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 14.6A8.4 8.4 0 1 1 9.4 4a6.7 6.7 0 0 0 10.6 10.6z"/></svg>
+        <span>夜间</span>
+      </button>
+      <button class="fm-btn" id="btn-light">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4.2"/>
+          <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4 17 7M7 17l-1.6 1.6"/></svg>
+        <span>亮度</span>
+      </button>
+      <button class="fm-btn" id="btn-set">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+          <path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></svg>
+        <span>设置</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 自动翻页正在跑时才出现的小胶囊（右下角，在底栏上方）。
+       点一下把「速度」面板叫回来 —— 平时面板是收着的，不挡正文。 -->
+  <button class="ap-pill" id="ap-pill">自动 <b id="ap-speed">19</b> ›</button>
+
+  <!-- 左侧目录侧滑面板：顶部书籍信息 + 中部目录列表 + 右侧悬浮胶囊滚动条。
+       面板宽 78%，右边缘微圆角；右边剩下的屏幕是半透明黑遮罩。 -->
+  <div class="drawer" id="drawer-toc">
+    <div class="drawer-mask" id="toc-mask"></div>
+    <div class="drawer-inner">
+      <div class="toc-book">
+        <!-- 书名用多行排版，不截断：长书名换行显示，比一行省略号好认 -->
+        <div class="tb-title" id="toc-title">　</div>
+        <div class="tb-sub">
+          <span class="tb-meta" id="toc-meta">　</span>
+          <button class="tb-order" id="toc-order">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 4.5 4.6 8 8 11.5M16 19.5 19.4 16 16 12.5"/>
+              <path d="M4.6 8h14.8M19.4 16H4.6"/>
+            </svg>
+            <span>倒序</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="toc-body">
+        <div class="toc-list" id="toc-list"></div>
+        <!-- 悬浮的胶囊滚动条：上下箭头 + 可拖的滑块。
+             手机上原生滚动条是隐藏的，几千章的目录没有它就不知道自己翻到哪了。 -->
+        <div class="toc-sbar" id="toc-sbar">
+          <button class="sb-arrow" id="sb-up" aria-label="往上一屏">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 14.5 12 9l5.5 5.5"/></svg>
+          </button>
+          <div class="sb-track" id="sb-track"><i class="sb-thumb" id="sb-thumb"></i></div>
+          <button class="sb-arrow" id="sb-down" aria-label="往下一屏">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                 stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheet-set">
+    <div class="sheet-mask" id="set-mask"></div>
+    <div class="sheet-inner">
+      <div class="sheet-grip"></div>
+      <div class="set-row">
+        <span class="set-label">字号</span>
+        <button class="step-btn" id="fs-minus">A-</button>
+        <span class="set-val" id="fs-val">18</span>
+        <button class="step-btn" id="fs-plus">A+</button>
+      </div>
+      <div class="set-row">
+        <span class="set-label">行距</span>
+        <button class="step-btn" id="lh-minus">紧</button>
+        <span class="set-val" id="lh-val">1.8</span>
+        <button class="step-btn" id="lh-plus">松</button>
+      </div>
+      <div class="set-row">
+        <span class="set-label">字体</span>
+        <div class="font-pick" id="font-pick">
+          <button class="pill" data-font="sans">默认</button>
+          <button class="pill" data-font="serif">宋体</button>
+          <button class="pill" data-font="mono">等宽</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">主题</span>
+        <div class="theme-pick" id="theme-pick">
+          <button data-theme="paper" class="dot dot-paper"></button>
+          <button data-theme="dark" class="dot dot-dark"></button>
+          <button data-theme="green" class="dot dot-green"></button>
+          <button data-theme="slate" class="dot dot-slate"></button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">章节连续阅读</span>
+        <div class="font-pick" id="auto-pick">
+          <button class="pill" data-auto="1">开</button>
+          <button class="pill" data-auto="0">关</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <span class="set-label">亮度</span>
+        <input type="range" id="brightness" min="20" max="100" value="100">
+      </div>
+      <div class="set-row set-actions">
+        <button class="pill" id="btn-fullscreen">沉浸模式</button>
+        <button class="pill" id="btn-bookmark">加书签</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 阅读设置面板（底栏「设置」键弹出） ============
+       四行：字号 / 背景 / 翻页 / 底部分隔行（自动翻页 · 更多阅读设置）
+       ⚠️ 「翻页」这四个不是"分页"，是**跳章时怎么过渡** ——
+          本 App 现在是一条连续的长书页，没有"页"可翻，所以这四个管的是
+          点上一章/下一章、拖进度条跳章时的动画：
+            覆盖 = 新内容从下往上滑上来   上下 = 直接跳（默认，最省电）
+            仿真 = 带透视的立体翻一下     平滑 = 平滑滚过去（不瞬间跳） -->
+  <div class="sheet" id="sheet-readset">
+    <div class="sheet-mask" id="rs-mask"></div>
+    <div class="sheet-inner rs-panel">
+      <div class="sheet-grip"></div>
+
+      <div class="rs-row">
+        <span class="rs-label">字号</span>
+        <div class="rs-body">
+          <button class="rs-btn" id="rs-fs-minus">A-</button>
+          <span class="rs-num" id="rs-fs-val">18</span>
+          <button class="rs-btn" id="rs-fs-plus">A+</button>
+          <button class="rs-btn rs-font" id="rs-font">
+            <span id="rs-font-name">思源黑体</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="rs-row">
+        <span class="rs-label">背景</span>
+        <div class="rs-body rs-dots" id="rs-theme">
+          <button class="rs-dot" data-theme="paper" aria-label="纸白"></button>
+          <button class="rs-dot" data-theme="dark" aria-label="夜间"></button>
+          <button class="rs-dot" data-theme="green" aria-label="护眼绿"></button>
+          <button class="rs-dot" data-theme="slate" aria-label="青灰"></button>
+        </div>
+      </div>
+
+      <!-- 「翻页方式」那一行已经撤掉了（2026-09-21 她定的：只保留上下滑动）。
+           别再往回加 —— 真分页那套引擎还在代码里（paged() 恒 false 关着），
+           但入口没了，也别让老设置把它打开。 -->
+
+      <div class="rs-foot">
+        <button class="rs-half" id="rs-auto">自动翻页 · 开</button>
+        <i class="rs-vline" aria-hidden="true"></i>
+        <button class="rs-half" id="rs-more">更多阅读设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 自动翻页的速度面板（深色，贴在屏幕最底） ============
+       手写风的字（楷体优先，没装就回落），第一行 速度/减速-/数值/加速+，
+       第二行一条细线隔开，一个「退出自动翻页」的宽按钮。 -->
+  <div class="sheet speed-sheet" id="sheet-speed">
+    <div class="sheet-inner sp-panel">
+      <div class="sp-row">
+        <span class="sp-label">速度</span>
+        <button class="sp-btn" id="sp-slow">减速 -</button>
+        <span class="sp-val" id="sp-val">19</span>
+        <button class="sp-btn" id="sp-fast">加速 +</button>
+      </div>
+      <div class="sp-exit-row">
+        <button class="sp-exit" id="sp-exit">退出自动翻页</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 字体面板（阅读设置里「思源… ›」弹出） ============ -->
+  <div class="sheet" id="sheet-font">
+    <div class="sheet-mask" id="font-mask"></div>
+    <div class="sheet-inner">
+      <div class="sheet-grip"></div>
+      <div class="fp-row" data-font="sans"><i class="fp-check"></i><span>思源黑体</span><em>默认</em></div>
+      <div class="fp-row" data-font="serif"><i class="fp-check"></i><span>思源宋体</span><em>宋体</em></div>
+      <div class="fp-row" data-font="mono"><i class="fp-check"></i><span>等宽</span><em>等宽</em></div>
+      <div class="fp-note">手机上没装思源的话，会回落到系统自带的同类中文字体
+        （一般是 Noto CJK），字距仍然会跟着变。</div>
+    </div>
+  </div>
+
+  <!-- ============ 亮度面板（底栏「亮度」键弹出） ============
+       两行式：
+         第一行 = 暗太阳 | 滑条（已激活轨道 + 圆滑块 + 未激活轨道）| 亮太阳
+         第二行 = 「亮度跟随系统」文字 | 拨动开关
+       ⚠️ 「跟随系统」= 砚读不压暗（把那层黑遮罩撤掉），亮度完全交给系统管；
+          关掉才是砚读自己盖遮罩压暗 —— WebView 里读不到也改不了系统真实亮度，
+          所以它的语义是"这层压暗归谁管"，不是"把系统亮度改成多少"。 -->
+  <div class="sheet" id="sheet-light">
+    <div class="sheet-mask" id="light-mask"></div>
+    <div class="sheet-inner light-panel">
+      <div class="sheet-grip"></div>
+      <div class="lp-slider" id="lp-slider">
+        <svg class="lp-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3.6" fill="currentColor" stroke="none"/>
+          <path d="M12 5.2v1.9M12 16.9v1.9M5.2 12h1.9M16.9 12h1.9"/>
+        </svg>
+        <div class="lp-track" id="lp-track" role="slider" aria-label="亮度"
+             aria-valuemin="20" aria-valuemax="100">
+          <i class="lp-fill" id="lp-fill"></i>
+          <i class="lp-knob" id="lp-knob"></i>
+        </div>
+        <svg class="lp-sun lp-sun-hi" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.6" fill="currentColor" stroke="none"/>
+          <path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.1 5.1l1.8 1.8M17.1 17.1l1.8 1.8M18.9 5.1l-1.8 1.8M6.9 17.1l-1.8 1.8"/>
+        </svg>
+      </div>
+      <div class="lp-row">
+        <span class="lp-label">亮度跟随系统</span>
+        <button class="switch" id="lp-switch" role="switch" aria-checked="false"
+                aria-label="亮度跟随系统"><i></i></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 底部导航：书架 / 导入 / 列表 ============ -->
+<nav id="tabbar" class="tabbar">
+  <button class="tab" data-page="shelf">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <!-- 小书架：框 + 两层板，板上立着几本书 -->
+      <rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/>
+      <path d="M3.5 9.5h17M3.5 15h17"/>
+      <path stroke-width="1.5" d="M6.8 6.4v2.2M9.8 6.4v2.2M13.8 6.4v2.2M7.3 12v2.2M12.3 12v2.2M9.5 17.4v2.2"/>
+    </svg>
+    <span>书架</span>
+  </button>
+
+  <button class="tab tab-add" data-page="import" aria-label="导入">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+      <path d="M12 8v8M8 12h8"/>
+    </svg>
+  </button>
+
+  <button class="tab" data-page="list">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+      <path d="M9.5 6.5H20M9.5 12H20M9.5 17.5H20"/>
+      <path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01"/>
+    </svg>
+    <span>列表</span>
+  </button>
+</nav>
+
+<!-- ============ 选书面板（编辑模式下往某一格加书） ============ -->
+<div class="sheet" id="sheet-pick">
+  <div class="sheet-mask" id="pick-mask"></div>
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <div class="pick-head">
+      <span id="pick-title">添加到这一格</span>
+      <span id="pick-cap" class="pick-cap">0/6</span>
+    </div>
+    <div class="pick-list" id="pick-list"></div>
+    <button class="pill pick-close" id="pick-close">关闭</button>
+  </div>
+</div>
+
+<!-- ============ 花名册（书脊上写不下的书名都记在这儿） ============ -->
+<div class="sheet" id="sheet-roster">
+  <div class="sheet-mask" id="roster-mask"></div>
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <div class="pick-head">
+      <span id="roster-title">花名册</span>
+      <span id="roster-count" class="pick-cap">0 本</span>
+    </div>
+    <p class="roster-note" id="roster-note">只记书脊上写不下、用序号标出来的书 · 点一行直接读</p>
+    <div class="pick-list" id="roster-list"></div>
+    <button class="pill pick-close" id="roster-close">关闭</button>
+  </div>
+</div>
+
+<!-- ============ 通用确认面板 ============ -->
+
+<div class="sheet" id="sheet-confirm">
+  <div class="sheet-mask" id="confirm-mask"></div>
+  <div class="sheet-inner">
+    <div class="sheet-grip"></div>
+    <p class="confirm-title" id="confirm-title"></p>
+    <p class="confirm-desc" id="confirm-desc"></p>
+    <div class="confirm-btns">
+      <button class="pill" id="confirm-no">取消</button>
+      <button class="pill danger" id="confirm-yes">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <span id="loading-text">处理中</span>
+</div>
+
+<div class="dim" id="dim"></div>
+<input type="file" id="file-input" accept=".txt,.text,text/plain" multiple hidden>
+
+<script src="js/db.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/shelf.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

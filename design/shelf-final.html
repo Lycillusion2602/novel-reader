@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 多宝格书架（正式代码预览）</title>
+<style>
+:root{ --page:#EDEDEA; --card:#fff; --ink:#1E3D2C; --accent:#2E6B4A; --muted:#9A9A95;
+  --serif:"Songti SC","Noto Serif CJK SC","SimSun",serif;
+  --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:#DEDEDB;min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;gap:16px;padding:22px 16px 50px}
+.hint{font-size:12.5px;color:#5F6663;text-align:center;max-width:660px;line-height:1.8}
+.hint b{color:var(--ink)}
+.phone{width:375px;height:812px;background:var(--page);border-radius:42px;overflow:hidden;
+  box-shadow:0 0 0 10px #1A1E1C,0 0 0 12px #333A36,0 26px 56px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;flex:none}
+.shelf-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 10px}
+.shelf-head h1{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:2px;color:var(--ink);line-height:1.2}
+.shelf-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.btn-primary{background:var(--accent);color:#fff;padding:9px 18px;border-radius:20px;font-size:14px;border:none}
+.shelf-stage{flex:1;min-height:0;display:grid;place-items:center;padding:4px 0 6px}
+.shelf-stage svg.bogu{width:min(84vw,330px);height:auto;display:block;overflow:visible}
+.shelf-stage .bk{cursor:pointer}
+.shelf-tip{text-align:center;font-size:11.5px;color:var(--muted);padding:0 20px 10px;min-height:14px}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:660px}
+.ctrl button{border:1px solid #E0E2DE;background:#fff;border-radius:9px;padding:7px 12px;font-size:12px;
+  cursor:pointer;color:#3A403C;font-family:inherit}
+.ctrl button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+</style>
+</head>
+<body>
+
+<p class="hint">
+  这一页跑的就是 <b>www/js/shelf.js</b> 的正式代码（原样内联），只是喂了假书数据。<br>
+  点下面的数字切换书的数量，看架子挤起来是什么样。点书脊会弹出书名。
+</p>
+
+<div class="phone">
+  <div class="shelf-head">
+    <div><h1>砚读</h1><div class="shelf-sub" id="sub">12 本在架</div></div>
+    <button class="btn-primary">+ 导入</button>
+  </div>
+  <div class="shelf-stage" id="stage"></div>
+  <div class="shelf-tip" id="tip"></div>
+</div>
+
+<div class="ctrl" id="ctrl"></div>
+
+<script>
+/**
+ * 多宝格书架渲染器 —— 数据驱动，不写死
+ *
+ * 设计原则：
+ * 1. 骨架（横板 H / 竖撑 V / 格子 SLOTS）全部是配置，可外部替换，也可存 localStorage。
+ * 2. 格子里的「放什么」由 slot.type 决定，渲染器可注册 —— 现在是 books，
+ *    以后想摆小挂件就 Shelf.register('ornament', fn) 加一个，不用改这里的代码。
+ * 3. 书的颜色统一走绿色系（只用明度/饱和度区分，不引入别的色相）。
+ *
+ * 用法：
+ *   Shelf.render(el, { items: [...], onItem: fn, onLongPress: fn })
+ *   Shelf.configure({ SLOTS: [...] }, true)     // 第二个参数 true = 存起来
+ *   Shelf.register('ornament', function (ctx) { return '<svg片段>'; })
+ */
+(function (global) {
+  'use strict';
+
+  var STORE_KEY = 'yandu.shelf.config';
+
+  /* ---------------- 默认配置 ---------------- */
+  var DEFAULTS = {
+    cx: 200, cy: 200,      // 圆心
+    r: 168,                // 内径
+    ring: 9,               // 圆环宽度
+    T: 8,                  // 板厚
+    fillet: 6,             // 倒角半径（0 = 硬直角）
+    endRound: 2.5,         // 板端圆角
+
+    /* 骨架：横板 [x1, y, x2] / 竖撑 [x, y1, y2]（400×400 画布） */
+    H: [
+      [38, 157, 192],
+      [250, 294, 339],
+      [37, 240, 250],
+      [78, 315, 177],
+      [192, 131, 285],
+      [229, 204, 366]
+    ],
+    V: [
+      [192, 34, 157],
+      [285, 131, 204],
+      [137, 157, 240],
+      [250, 204, 294]
+    ],
+
+    /* 格子：[x, y, w, h]（左上角 + 宽高）。type 决定里面放什么 */
+    SLOTS: [
+      { x: 198, y: 46,  w: 72,  h: 78, type: 'books' },
+      { x: 88,  y: 76,  w: 98,  h: 74, type: 'books' },
+      { x: 38,  y: 158, w: 96,  h: 76, type: 'books' },
+      { x: 144, y: 164, w: 52,  h: 72, type: 'books' },
+      { x: 70,  y: 250, w: 104, h: 60, type: 'books' },
+      { x: 294, y: 130, w: 56,  h: 66, type: 'books' },
+      { x: 228, y: 138, w: 50,  h: 58, type: 'books' },
+      { x: 258, y: 212, w: 84,  h: 78, type: 'books' }
+    ],
+
+    /* 配色：只用绿色系，靠明暗区分不同书 */
+    greens: ['#2E6B4A', '#3D7A57', '#245539', '#4E8A63', '#1F4A33', '#5C9470', '#376B52', '#6A9E7C'],
+
+    book: { idealW: 14, minW: 8, fontSize: 8.5 }
+  };
+
+  var cfg = JSON.parse(JSON.stringify(DEFAULTS));
+
+  /* ---------------- 配置读写 ---------------- */
+  function loadConfig() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) cfg = merge(JSON.parse(JSON.stringify(DEFAULTS)), JSON.parse(raw));
+    } catch (e) { /* 读不到就用默认 */ }
+    return cfg;
+  }
+  function merge(a, b) {
+    Object.keys(b || {}).forEach(function (k) {
+      if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) a[k] = merge(a[k] || {}, b[k]);
+      else a[k] = b[k];
+    });
+    return a;
+  }
+  function configure(patch, persist) {
+    cfg = merge(cfg, patch || {});
+    if (persist) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(cfg)); } catch (e) {}
+    }
+    return cfg;
+  }
+  function resetConfig() {
+    cfg = JSON.parse(JSON.stringify(DEFAULTS));
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    return cfg;
+  }
+
+  /* ---------------- 小工具 ---------------- */
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function hash(s) {
+    var h = 0;
+    for (var i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) >>> 0;
+    return h;
+  }
+  function f(n) { return Number(n).toFixed(1); }
+
+  /* ---------------- 倒角：木工 fillet ----------------
+     两块板相交的内角：沿两边各退 r，再用半径 r 的弧把两点连起来，
+     补出的这块料把 90° 硬角磨成圆滑过渡。只有两侧都有板料的角才是内角。 */
+  function filletPaths(r) {
+    if (!(r > 0.2)) return '';
+    var T = cfg.T, d = '';
+    cfg.H.forEach(function (h) {
+      var hx1 = Math.min(h[0], h[2]), hx2 = Math.max(h[0], h[2]), hy = h[1];
+      cfg.V.forEach(function (v) {
+        var vx = v[0], vy1 = Math.min(v[1], v[2]), vy2 = Math.max(v[1], v[2]);
+        if (vx + T / 2 < hx1 || vx - T / 2 > hx2) return;
+        if (hy + T / 2 < vy1 || hy - T / 2 > vy2) return;
+        var x0 = vx - T / 2, x1 = vx + T / 2, y0 = hy - T / 2, y1 = hy + T / 2;
+        var cs = [
+          { c: [x0, y0], ok: hx1 < x0 - 0.5 && vy1 < y0 - 0.5, d1: [-1, 0], d2: [0, -1] },
+          { c: [x1, y0], ok: hx2 > x1 + 0.5 && vy1 < y0 - 0.5, d1: [1, 0], d2: [0, -1] },
+          { c: [x1, y1], ok: hx2 > x1 + 0.5 && vy2 > y1 + 0.5, d1: [1, 0], d2: [0, 1] },
+          { c: [x0, y1], ok: hx1 < x0 - 0.5 && vy2 > y1 + 0.5, d1: [-1, 0], d2: [0, 1] }
+        ];
+        cs.forEach(function (k) {
+          if (!k.ok) return;
+          var C = k.c;
+          var A = [C[0] + r * k.d1[0], C[1] + r * k.d1[1]];
+          var B = [C[0] + r * k.d2[0], C[1] + r * k.d2[1]];
+          var O = [C[0] + r * (k.d1[0] + k.d2[0]), C[1] + r * (k.d1[1] + k.d2[1])];
+          // 用 A-O、B-O 的实际坐标算极角（别用 angle(-d)，d 里的 0 会产生 -0 而算错）
+          var tA = Math.atan2(A[1] - O[1], A[0] - O[0]);
+          var tB = Math.atan2(B[1] - O[1], B[0] - O[0]);
+          var dt = tB - tA;
+          while (dt <= -Math.PI) dt += 2 * Math.PI;
+          while (dt > Math.PI) dt -= 2 * Math.PI;
+          d += '<path d="M' + f(A[0]) + ' ' + f(A[1]) +
+               ' A' + f(r) + ' ' + f(r) + ' 0 0 ' + (dt > 0 ? 1 : 0) + ' ' + f(B[0]) + ' ' + f(B[1]) +
+               ' L' + f(C[0]) + ' ' + f(C[1]) + ' Z"/>';
+        });
+      });
+    });
+    return d;
+  }
+
+  function frameSVG() {
+    var T = cfg.T, body = '', hi = '';
+    cfg.H.forEach(function (p) {
+      var x = Math.min(p[0], p[2]), w = Math.abs(p[2] - p[0]), y = p[1];
+      body += '<rect x="' + f(x) + '" y="' + f(y - T / 2) + '" width="' + f(w) + '" height="' + T +
+              '" rx="' + cfg.endRound + '"/>';
+      hi += '<rect x="' + f(x + 1.6) + '" y="' + f(y - T / 2 + 0.7) + '" width="' + f(w - 3.2) +
+            '" height="1.1" rx="0.5"/>';
+    });
+    cfg.V.forEach(function (p) {
+      var x = p[0], y = Math.min(p[1], p[2]), h = Math.abs(p[2] - p[1]);
+      body += '<rect x="' + f(x - T / 2) + '" y="' + f(y) + '" width="' + T + '" height="' + f(h) +
+              '" rx="' + cfg.endRound + '"/>';
+      hi += '<rect x="' + f(x - T / 2 + 0.7) + '" y="' + f(y + 1.6) + '" width="1.1" height="' + f(h - 3.2) +
+            '" rx="0.5"/>';
+    });
+    var fl = filletPaths(cfg.fillet);
+    return { body: body + fl, hi: hi };
+  }
+
+  /* ---------------- 内容渲染器（按 type 分派，可扩展） ---------------- */
+  var RENDERERS = {};
+
+  function register(type, fn) { RENDERERS[type] = fn; }
+
+  /* 书：竖排书脊，统一绿色系，厚度按字数、高低按 hash 错落 */
+  RENDERERS.books = function (ctx) {
+    var s = ctx.slot, items = ctx.items, out = '';
+    if (!items.length) return '';
+    var bw = ctx.bookWidth;
+    var ft = cfg.book.fontSize;
+    var x = s.x + 1.5;
+    var bottom = s.y + s.h - 1;
+    // 书太多时书脊会被压窄，窄到一定程度就不写字了（不然字会溢出书脊）
+    var showText = bw >= 11;
+    items.forEach(function (it) {
+      var hv = hash(it.title || '');
+      var thick = 0.72 + ((hv >> 3) % 27) / 100;            // 0.72 ~ 0.98 的槽高
+      var bh = Math.max(26, Math.min(s.h - 2, s.h * thick));
+      var by = bottom - bh;
+      var color = cfg.greens[hv % cfg.greens.length];
+
+      out += '<g class="bk" data-book-id="' + esc(it.id) + '" data-title="' + esc(it.title || '') + '">';
+      out += '<rect x="' + f(x) + '" y="' + f(by) + '" width="' + f(bw - 1.6) + '" height="' + f(bh) +
+             '" rx="1.6" fill="' + color + '"/>';
+      // 顶部一条浅色环带（书脊装饰）
+      out += '<rect x="' + f(x) + '" y="' + f(by + 3) + '" width="' + f(bw - 1.6) + '" height="1" fill="rgba(255,255,255,.28)"/>';
+      out += '<rect x="' + f(x) + '" y="' + f(bottom - 4) + '" width="' + f(bw - 1.6) + '" height="1" fill="rgba(255,255,255,.20)"/>';
+      // 阅读进度：底部往上一条更亮的绿
+      if (it.pct > 0) {
+        var ph = Math.max(2, bh * Math.min(1, it.pct / 100));
+        out += '<rect x="' + f(x) + '" y="' + f(bottom - ph) + '" width="' + f(bw - 1.6) + '" height="' + f(ph) +
+               '" rx="1.6" fill="rgba(255,255,255,.16)"/>';
+      }
+      // 竖排书名（逐字排，最稳）
+      if (showText) {
+        var maxChars = Math.max(2, Math.floor((bh - 8) / (ft + 2.4)));
+        var name = String(it.title || '无题');
+        var chars = name.slice(0, maxChars);
+        if (name.length > maxChars) chars = chars.slice(0, Math.max(1, maxChars - 1)) + '…';
+        for (var i = 0; i < chars.length; i++) {
+          out += '<text x="' + f(x + (bw - 1.6) / 2) + '" y="' + f(by + 8 + i * (ft + 2.4)) +
+                 '" font-size="' + ft + '" fill="rgba(255,255,255,.92)" text-anchor="middle" ' +
+                 'font-family="Songti SC,SimSun,serif" pointer-events="none">' + esc(chars[i]) + '</text>';
+        }
+      }
+      out += '</g>';
+      x += bw;
+    });
+    return out;
+  };
+
+  /* 摆件占位：现在画一个小陶罐剪影。以后换成印章/香炉/竹枝，
+     只要注册新的 type 或改这个函数，不用动别的地方。 */
+  RENDERERS.ornament = function (ctx) {
+    var s = ctx.slot, out = '';
+    var n = Math.max(1, Math.floor(s.w / 26));
+    for (var i = 0; i < n; i++) {
+      var cxp = s.x + s.w * (i + 0.5) / n;
+      var cyp = s.y + s.h - 12;
+      out += '<g class="orn" data-slot-id="' + esc(ctx.slot.id || '') + '">' +
+             '<path d="M' + f(cxp - 6) + ' ' + f(cyp) + ' q0 -10 6 -14 q6 4 6 14 z" fill="#245539" opacity=".85"/>' +
+             '<rect x="' + f(cxp - 3) + '" y="' + f(cyp - 18) + '" width="6" height="4" rx="1.5" fill="#1F4A33"/>' +
+             '</g>';
+    }
+    return out;
+  };
+
+  /* ---------------- 布局：把 items 分进各格子 ---------------- */
+  function layout(items, slots) {
+    var bw = cfg.book.idealW;
+    var capAt = function (w) {
+      return slots.reduce(function (a, s) { return a + Math.max(1, Math.floor((s.w - 2) / w)); }, 0);
+    };
+    while (capAt(bw) < items.length && bw > cfg.book.minW) bw -= 1;
+
+    var used = 0, per = [];
+    slots.forEach(function (s) {
+      var cap = Math.max(1, Math.floor((s.w - 2) / bw));
+      var take = items.slice(used, used + cap);
+      used += take.length;
+      per.push(take);
+    });
+    return { per: per, bookWidth: bw, overflow: Math.max(0, items.length - used) };
+  }
+
+  /* ---------------- 主渲染 ---------------- */
+  function render(el, opts) {
+    opts = opts || {};
+    var items = opts.items || [];
+    var slots = cfg.SLOTS;
+    var L = layout(items, slots);
+
+    var inner = frameSVG();
+    var content = '';
+    slots.forEach(function (s, i) {
+      var fn = RENDERERS[s.type];
+      if (!fn) return;
+      content += fn({ slot: s, items: L.per[i] || [], bookWidth: L.bookWidth, index: i });
+    });
+
+    var R = cfg.r, cx = cfg.cx, cy = cfg.cy;
+    var svg =
+      '<svg class="bogu" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="ringG" x1="0.1" y1="0" x2="0.9" y2="1">' +
+          '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.5" stop-color="#F8F9F7"/>' +
+          '<stop offset="1" stop-color="#DAE0DA"/></linearGradient>' +
+        '<radialGradient id="backG" cx="0.4" cy="0.34" r="0.78">' +
+          '<stop offset="0" stop-color="#DBE5DC"/><stop offset="1" stop-color="#C9D7CB"/></radialGradient>' +
+        '<linearGradient id="plankG" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.62" stop-color="#FBFCFA"/>' +
+          '<stop offset="1" stop-color="#EDF1ED"/></linearGradient>' +
+        '<filter id="ringSh" x="-14%" y="-14%" width="128%" height="132%">' +
+          '<feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#96A79A" flood-opacity="0.42"/></filter>' +
+        '<filter id="boguBlur" x="-25%" y="-25%" width="150%" height="160%">' +
+          '<feGaussianBlur stdDeviation="1.6"/></filter>' +
+        '<clipPath id="boguInner"><circle cx="' + cx + '" cy="' + cy + '" r="' + R + '"/></clipPath>' +
+      '</defs>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + cfg.ring) + '" fill="url(#ringG)" filter="url(#ringSh)"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + 1.5) + '" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.28"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="url(#backG)"/>' +
+      '<g clip-path="url(#boguInner)">' +
+        '<g filter="url(#boguBlur)" opacity="0.42"><g fill="#7E9484" transform="translate(1.7,3.4)">' + inner.body + '</g></g>' +
+        '<g fill="url(#plankG)">' + inner.body + '</g>' +
+        '<g fill="#FFFFFF" opacity="0.9">' + inner.hi + '</g>' +
+        content +
+      '</g>' +
+      '</svg>';
+
+    el.innerHTML = svg;
+
+    /* 事件：点击打开，长按删除（长按 550ms） */
+    var timer = null, moved = false;
+    function pick(e) {
+      var t = e.target;
+      if (!t || !t.closest) return null;
+      var g = t.closest('.bk');
+      return g ? g.getAttribute('data-book-id') : null;
+    }
+    el.onclick = function (e) {
+      var id = pick(e);
+      if (id && opts.onItem) {
+        var it = items.filter(function (x) { return String(x.id) === id; })[0];
+        opts.onItem(it || { id: id });
+      }
+    };
+    el.onpointerdown = function (e) {
+      moved = false;
+      var id = pick(e);
+      if (!id) return;
+      timer = setTimeout(function () {
+        if (!moved && opts.onLongPress) {
+          var it = items.filter(function (x) { return String(x.id) === id; })[0];
+          opts.onLongPress(it || { id: id });
+        }
+      }, 550);
+    };
+    el.onpointermove = function () { moved = true; };
+    el.onpointerup = function () { clearTimeout(timer); };
+    el.onpointercancel = function () { clearTimeout(timer); };
+
+    return { overflow: L.overflow, capacity: items.length - L.overflow };
+  }
+
+  global.Shelf = {
+    render: render,
+    register: register,
+    configure: configure,
+    getConfig: function () { return cfg; },
+    resetConfig: resetConfig,
+    DEFAULTS: DEFAULTS
+  };
+
+  loadConfig();
+})(window);
+
+</script>
+<script>
+var NAMES = ['三体·黑暗森林','雪中悍刀行','明朝那些事儿','乡土中国','百年孤独','围城',
+  '三国演义','水浒传','史记','诗经','人间词话','万历十五年','活着','许三观卖血记',
+  '平凡的世界','骆驼祥子','边城','呐喊','朝花夕拾','茶馆','雷雨','家','春','秋',
+  '静静的顿河','战争与和平','罪与罚','卡拉马佐夫兄弟','追忆似水年华','尤利西斯',
+  '道德经','庄子','论语','孟子','孙子兵法','三十六计','资治通鉴','汉书','后汉书','三国志',
+  '楚辞','乐府诗集','文心雕龙','搜神记','世说新语','颜氏家训','菜根谭','小窗幽记',
+  '浮生六记','影梅庵忆语','陶庵梦忆','西湖梦寻','徐霞客游记','阅微草堂笔记','聊斋志异'];
+
+function mk(n){
+  var a=[];
+  for(var i=0;i<n;i++){
+    a.push({ id:'b'+i, title:NAMES[i%NAMES.length], totalChars:200000+((i*137)%900000), pct:(i*17)%100 });
+  }
+  return a;
+}
+var cur=12;
+function draw(n){
+  cur=n;
+  var items=mk(n);
+  var res=Shelf.render(document.getElementById('stage'),{
+    items:items,
+    onItem:function(it){ alert('打开《'+it.title+'》'); }
+  });
+  document.getElementById('sub').textContent=n+' 本在架';
+  document.getElementById('tip').textContent=res.overflow?('架上放不下了，还有 '+res.overflow+' 本没摆出来'):'';
+  Array.prototype.forEach.call(document.querySelectorAll('#ctrl button'),function(b){
+    b.classList.toggle('on', +b.getAttribute('data-n')===n);
+  });
+}
+[0,3,8,12,25,40,60,90].forEach(function(n){
+  var b=document.createElement('button');
+  b.textContent=n+' 本'; b.setAttribute('data-n',n);
+  b.onclick=function(){ draw(n); };
+  document.getElementById('ctrl').appendChild(b);
+});
+draw(12);
+</script>
+</body>
+</html>

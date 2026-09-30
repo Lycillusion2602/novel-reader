@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 多宝格（自然倒角 + 自己圈放书位）</title>
+<style>
+:root {
+  --page: #EDEDEA; --card: #FFFFFF; --ink: #1E3D2C; --accent: #2E6B4A;
+  --muted: #9A9A95; --muted-2: #B6B9B4; --line: #E9E9E5;
+  --serif: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--sans); background: #DEDEDB; color: #22221F;
+  min-height: 100vh; padding: 22px 18px 60px;
+}
+.head { max-width: 900px; margin: 0 auto 16px; }
+.head h2 { font-family: var(--serif); font-size: 18px; color: var(--ink); letter-spacing: 1px; margin-bottom: 6px; }
+.head p { font-size: 12.5px; color: #5F6663; line-height: 1.8; }
+.head b { color: var(--ink); }
+
+.wrap { max-width: 900px; margin: 0 auto; display: flex; gap: 26px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+
+.phone {
+  width: 375px; height: 812px; background: var(--page); flex: none;
+  border-radius: 42px; overflow: hidden; position: relative;
+  box-shadow: 0 0 0 10px #1A1E1C, 0 0 0 12px #333A36, 0 26px 56px rgba(0,0,0,.3);
+  display: flex; flex-direction: column;
+}
+.topbar { display: flex; align-items: flex-start; gap: 10px; padding: 16px 20px 0; }
+.topbar .left { flex: 1; }
+.topbar h1 { font-family: var(--serif); font-size: 21px; font-weight: 600; letter-spacing: 2px; color: var(--ink); line-height: 1.2; }
+.topbar .meta { font-size: 11px; color: var(--muted); margin-top: 5px; letter-spacing: .5px; }
+.icbtn { width: 34px; height: 34px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink); flex: none; }
+.icbtn svg { width: 17px; height: 17px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; }
+.stage { flex: 1; display: grid; place-items: center; }
+.bogu { width: 315px; height: 315px; display: block; overflow: visible; touch-action: none; }
+
+.readcard { margin: 0 16px; background: var(--card); border-radius: 16px; padding: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 10px rgba(30,61,44,.06); }
+.readcard .badge { width: 42px; height: 42px; border-radius: 10px; background: var(--accent); flex: none; display: grid; place-items: center; gap: 3px; }
+.readcard .badge i { display: block; width: 17px; height: 2px; background: rgba(255,255,255,.92); border-radius: 1px; }
+.readcard .txt { flex: 1; min-width: 0; }
+.readcard .txt b { display: block; font-size: 15px; font-weight: 600; color: #22221F; letter-spacing: .3px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.readcard .txt small { font-size: 11px; color: var(--muted); }
+.readcard .go { flex: none; background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 9px 16px; font-size: 13px; font-weight: 500; }
+.tabbar { margin: 14px 16px 18px; background: var(--card); border-radius: 999px; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(30,61,44,.06); }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: var(--muted-2); flex: 1; }
+.tab.on { color: var(--accent); }
+.tab svg { width: 19px; height: 19px; stroke: currentColor; stroke-width: 1.7; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tab.mid { flex: none; }
+.tab.mid .plus { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; margin-top: -14px; box-shadow: 0 3px 10px rgba(46,107,74,.34); }
+.tab.mid .plus svg { stroke: #fff; width: 20px; height: 20px; }
+
+.panel { width: 330px; background: var(--card); border-radius: 18px; padding: 16px 16px 18px; box-shadow: 0 2px 14px rgba(30,61,44,.08); flex: none; }
+.panel h3 { font-size: 13px; color: var(--ink); margin-bottom: 10px; letter-spacing: .5px; }
+.row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+button.b {
+  border: 1px solid var(--line); background: #F6F7F5; color: #3A403C;
+  border-radius: 9px; padding: 7px 11px; font-size: 12px; cursor: pointer; font-family: inherit;
+}
+button.b:hover { background: #ECEEEA; }
+button.b.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.b.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fld { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #4A524E; margin-bottom: 10px; }
+.fld input[type=range] { flex: 1; accent-color: var(--accent); }
+.fld .v { width: 34px; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tip { font-size: 11.5px; color: #7A827E; line-height: 1.75; background: #F4F5F3; border-radius: 9px; padding: 9px 11px; margin-bottom: 12px; }
+ul.slots { list-style: none; max-height: 168px; overflow: auto; border: 1px solid var(--line); border-radius: 9px; }
+ul.slots li { display: flex; align-items: center; gap: 8px; padding: 6px 9px; font-size: 11.5px; border-bottom: 1px solid #F1F1EE; font-variant-numeric: tabular-nums; }
+ul.slots li:last-child { border-bottom: none; }
+ul.slots li.sel { background: #EDF3EE; }
+ul.slots li .no { width: 20px; height: 20px; border-radius: 6px; background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 10px; flex: none; }
+ul.slots li .xy { flex: 1; color: #5F6663; }
+ul.slots li .del { border: none; background: none; color: #B0453C; cursor: pointer; font-size: 13px; padding: 2px 5px; border-radius: 5px; }
+ul.slots li .del:hover { background: #FBEEEC; }
+.empty { font-size: 11.5px; color: #A3A9A5; padding: 10px; text-align: center; }
+textarea { width: 100%; height: 108px; font-family: ui-monospace,Consolas,monospace; font-size: 11px; line-height: 1.6; border: 1px solid var(--line); border-radius: 9px; padding: 9px; resize: vertical; color: #3A403C; background: #FAFBFA; }
+.copyMsg { font-size: 11.5px; color: var(--accent); height: 15px; margin-top: 5px; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h2>多宝格 · 自然倒角 + 自己圈放书位</h2>
+  <p>
+    ① 连接处改成<b>木工倒角</b>：两块板相交的内角沿板边切一段圆弧，轮廓自然拐过去（不是盖一个圆）。右边<b>倒角半径</b>可滑杆调，0 = 关掉看对比。<br>
+    ② 放书位<b>由你画</b>：在圆里<b>按住拖一个框</b>就生成一个格子，可拖着挪、点一下选中、按 <b>Delete</b> 删除。画完点「复制参数」把结果发我。
+  </p>
+</div>
+
+<div class="wrap">
+  <div class="phone">
+    <div class="topbar">
+      <div class="left">
+        <h1>砚读</h1>
+        <div class="meta">已陈列 4 本 · 摆设 3 件 · 空位 2</div>
+      </div>
+      <button class="icbtn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+      <button class="icbtn"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+
+    <div class="stage">
+      <svg class="bogu" id="svg" viewBox="0 0 400 400">
+        <defs>
+          <linearGradient id="ringG" x1="0.1" y1="0" x2="0.9" y2="1">
+            <stop offset="0" stop-color="#FFFFFF"/>
+            <stop offset="0.5" stop-color="#F8F9F7"/>
+            <stop offset="1" stop-color="#DAE0DA"/>
+          </linearGradient>
+          <radialGradient id="backG" cx="0.4" cy="0.34" r="0.78">
+            <stop offset="0" stop-color="#DBE5DC"/>
+            <stop offset="1" stop-color="#C9D7CB"/>
+          </radialGradient>
+          <linearGradient id="plankG" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFFFF"/>
+            <stop offset="0.62" stop-color="#FBFCFA"/>
+            <stop offset="1" stop-color="#EDF1ED"/>
+          </linearGradient>
+          <filter id="ringSh" x="-14%" y="-14%" width="128%" height="132%">
+            <feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#96A79A" flood-opacity="0.42"/>
+          </filter>
+          <filter id="blur" x="-25%" y="-25%" width="150%" height="160%">
+            <feGaussianBlur stdDeviation="1.6"/>
+          </filter>
+          <clipPath id="inner"><circle cx="200" cy="200" r="168"/></clipPath>
+        </defs>
+
+        <circle cx="200" cy="200" r="177" fill="url(#ringG)" filter="url(#ringSh)"/>
+        <circle cx="200" cy="200" r="169.5" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.28"/>
+        <circle cx="200" cy="200" r="168" fill="url(#backG)"/>
+
+        <g clip-path="url(#inner)">
+          <g filter="url(#blur)" opacity="0.42">
+            <g fill="#7E9484" transform="translate(1.7,3.4)" id="planksSh"></g>
+          </g>
+          <g fill="url(#plankG)" id="planks"></g>
+          <g fill="#FFFFFF" opacity="0.9" id="planksHi"></g>
+          <g id="slots"></g>
+          <g id="books"></g>
+          <rect id="draft" fill="rgba(46,107,74,.10)" stroke="#2E6B4A" stroke-width="1" stroke-dasharray="4 4" rx="5" style="display:none"/>
+        </g>
+
+        <rect id="hit" x="0" y="0" width="400" height="400" fill="transparent" style="cursor:crosshair"/>
+      </svg>
+    </div>
+
+    <div class="readcard">
+      <div class="badge"><i></i><i></i><i></i></div>
+      <div class="txt"><b>三体·黑暗森林</b><small>刘慈欣 · 第 30/48 章 · 还剩 18 章</small></div>
+      <button class="go">继续读</button>
+    </div>
+
+    <div class="tabbar">
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>我的序列</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M12 5v14M8 9v10M16 9v10M4 13v6"/></svg>全部书目</div>
+      <div class="tab mid"><div class="plus"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M6 20V12M12 20V5M18 20v-5"/></svg>统计</div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6"/></svg>我的</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>放书位（自己圈）</h3>
+    <div class="tip">在圆里按住拖一个框 = 新增格子；拖已有格子 = 挪位置；点一下 = 选中；<b>Delete</b> = 删除选中的。</div>
+    <div class="row">
+      <button class="b" id="btnSnap">网格吸附 2px</button>
+      <button class="b" id="btnPreview">预览放书</button>
+    </div>
+    <div class="row">
+      <button class="b" id="btnUndo">撤销一个</button>
+      <button class="b" id="btnClear">清空</button>
+    </div>
+
+    <h3 style="margin-top:14px">倒角</h3>
+    <div class="fld"><span>半径</span><input type="range" id="fillet" min="0" max="12" step="0.5" value="6"><span class="v" id="filletV">6.0</span></div>
+
+    <h3 style="margin-top:12px">已画的格子 <span id="cnt" style="color:#A3A9A5;font-weight:400"></span></h3>
+    <ul class="slots" id="slotList"></ul>
+
+    <div class="row" style="margin-top:12px">
+      <button class="b primary" id="btnCopy">复制参数</button>
+    </div>
+    <textarea id="out" readonly></textarea>
+    <div class="copyMsg" id="msg"></div>
+  </div>
+</div>
+
+<script>
+/* ============ 骨架（沿用你摆的位置，不动） ============ */
+var T = 8;                       // 板厚
+var H = [
+  [ 38, 157, 192],
+  [250, 294, 339],
+  [ 37, 240, 250],
+  [ 78, 315, 177],
+  [192, 131, 285],
+  [229, 204, 366]
+];
+var V = [
+  [192,  34, 157],
+  [285, 131, 204],
+  [137, 157, 240],
+  [250, 204, 294]
+];
+
+/* ============ 倒角：在两板相交的内角切一段圆弧 ============ */
+/* 原理：角点 C，两块板各自朝 d1、d2 方向有料。
+   沿两边各退 r 得到 A、B，再用半径 r 的圆弧把 A、B 连起来，
+   补出的这块料把 90° 硬角磨成圆滑过渡（木工倒角 / fillet）。   */
+function filletPaths(r) {
+  if (r <= 0.2) return '';
+  var d = '';
+  var F = function (n) { return n.toFixed(1); };
+  H.forEach(function (h) {
+    var hx1 = Math.min(h[0], h[2]), hx2 = Math.max(h[0], h[2]), hy = h[1];
+    V.forEach(function (v) {
+      var vx = v[0], vy1 = Math.min(v[1], v[2]), vy2 = Math.max(v[1], v[2]);
+      if (vx + T / 2 < hx1 || vx - T / 2 > hx2) return;   // 不相交
+      if (hy + T / 2 < vy1 || hy - T / 2 > vy2) return;
+      var x0 = vx - T / 2, x1 = vx + T / 2, y0 = hy - T / 2, y1 = hy + T / 2;
+      // 只有「两边都有料」的角才是内角，才需要倒角
+      var cs = [
+        { c: [x0, y0], ok: hx1 < x0 - 0.5 && vy1 < y0 - 0.5, d1: [-1, 0], d2: [0, -1] },
+        { c: [x1, y0], ok: hx2 > x1 + 0.5 && vy1 < y0 - 0.5, d1: [ 1, 0], d2: [0, -1] },
+        { c: [x1, y1], ok: hx2 > x1 + 0.5 && vy2 > y1 + 0.5, d1: [ 1, 0], d2: [0,  1] },
+        { c: [x0, y1], ok: hx1 < x0 - 0.5 && vy2 > y1 + 0.5, d1: [-1, 0], d2: [0,  1] }
+      ];
+      cs.forEach(function (k) {
+        if (!k.ok) return;
+        var C = k.c;
+        var A = [C[0] + r * k.d1[0], C[1] + r * k.d1[1]];
+        var B = [C[0] + r * k.d2[0], C[1] + r * k.d2[1]];
+        // 弧心在 C + r*d1 + r*d2；A 的极角 = angle(-d2)，B 的极角 = angle(-d1)
+        var tA = Math.atan2(-k.d2[1], -k.d2[0]);
+        var tB = Math.atan2(-k.d1[1], -k.d1[0]);
+        var dt = tB - tA;
+        while (dt <= -Math.PI) dt += 2 * Math.PI;
+        while (dt >  Math.PI) dt -= 2 * Math.PI;
+        var sweep = dt > 0 ? 1 : 0;
+        d += '<path d="M' + F(A[0]) + ' ' + F(A[1]) +
+             ' A' + F(r) + ' ' + F(r) + ' 0 0 ' + sweep + ' ' + F(B[0]) + ' ' + F(B[1]) +
+             ' L' + F(C[0]) + ' ' + F(C[1]) + ' Z"/>';
+      });
+    });
+  });
+  return d;
+}
+
+function rect(x, y, w, h, rx) {
+  return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + w.toFixed(1) +
+         '" height="' + h.toFixed(1) + '" rx="' + rx + '"/>';
+}
+
+var svg = document.getElementById('svg');
+function buildFrame() {
+  var r = +document.getElementById('fillet').value;
+  var body = '', hi = '';
+  H.forEach(function (p) {
+    var x = Math.min(p[0], p[2]), w = Math.abs(p[2] - p[0]), y = p[1];
+    body += rect(x, y - T / 2, w, T, 2.5);
+    hi += rect(x + 1.6, y - T / 2 + 0.7, w - 3.2, 1.1, 0.5);
+  });
+  V.forEach(function (p) {
+    var x = p[0], y = Math.min(p[1], p[2]), h = Math.abs(p[2] - p[1]);
+    body += rect(x - T / 2, y, T, h, 2.5);
+    hi += rect(x - T / 2 + 0.7, y + 1.6, 1.1, h - 3.2, 0.5);
+  });
+  var f = filletPaths(r);
+  document.getElementById('planks').innerHTML = body + f;
+  document.getElementById('planksSh').innerHTML = body + f;
+  document.getElementById('planksHi').innerHTML = hi;
+}
+
+/* ============ 放书位：手画 ============ */
+var SLOTS = [];          // {x,y,w,h}
+var sel = -1;
+var snap = true, preview = false;
+var BOOKC = ['#3E5C6B','#4A5D7E','#56706B','#6B5B78','#2F6B63','#5A6E86','#43544F','#7A4F52'];
+var BOOKT = ['三','体','雪','中','明','朝','乡','土','百','年','围','城','西','游','水','浒','史','记','诗','经'];
+
+function sn(v) { return snap ? Math.round(v / 2) * 2 : Math.round(v * 10) / 10; }
+
+function renderSlots() {
+  var g = document.getElementById('slots'), s = '';
+  SLOTS.forEach(function (k, i) {
+    var on = (i === sel);
+    s += '<rect x="' + k.x + '" y="' + k.y + '" width="' + k.w + '" height="' + k.h + '" rx="5" ' +
+         'fill="' + (on ? 'rgba(46,107,74,.16)' : 'rgba(46,107,74,.07)') + '" ' +
+         'stroke="#2E6B4A" stroke-width="' + (on ? 1.4 : 1) + '" stroke-dasharray="4 4" ' +
+         'opacity="' + (on ? '.85' : '.5') + '" data-i="' + i + '"/>';
+    s += '<text x="' + (k.x + 5) + '" y="' + (k.y + 12) + '" font-size="10" fill="#2E6B4A" opacity=".75" ' +
+         'font-family="-apple-system,sans-serif" pointer-events="none">' + (i + 1) + '</text>';
+  });
+  g.innerHTML = s;
+
+  var b = '';
+  if (preview) {
+    SLOTS.forEach(function (k, i) {
+      var n = Math.max(2, Math.min(7, Math.floor(k.w / 16)));
+      var bw = Math.min(20, (k.w - 4) / n);
+      for (var j = 0; j < n; j++) {
+        var bx = k.x + 2 + j * bw;
+        var bh = k.h * (0.62 + ((i * 3 + j * 5) % 5) * 0.06);
+        var by = k.y + k.h - bh;
+        var c = BOOKC[(i * 3 + j) % BOOKC.length];
+        b += '<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + (bw - 2).toFixed(1) +
+             '" height="' + bh.toFixed(1) + '" rx="1.5" fill="' + c + '"/>';
+        var chars = Math.min(6, Math.floor(bh / 13));
+        for (var m = 0; m < chars; m++) {
+          b += '<text x="' + (bx + (bw - 2) / 2).toFixed(1) + '" y="' + (by + 12 + m * 13).toFixed(1) +
+               '" font-size="9" fill="rgba(255,255,255,.9)" text-anchor="middle" ' +
+               'font-family="Songti SC,SimSun,serif" pointer-events="none">' +
+               BOOKT[(i * 7 + j * 3 + m) % BOOKT.length] + '</text>';
+        }
+      }
+    });
+  }
+  document.getElementById('books').innerHTML = b;
+
+  var ul = document.getElementById('slotList');
+  if (!SLOTS.length) { ul.innerHTML = '<li class="empty">还没画，去圆里拖一个框</li>'; }
+  else {
+    ul.innerHTML = SLOTS.map(function (k, i) {
+      return '<li class="' + (i === sel ? 'sel' : '') + '" data-i="' + i + '">' +
+             '<span class="no">' + (i + 1) + '</span>' +
+             '<span class="xy">x ' + k.x + ' · y ' + k.y + ' · ' + k.w + '×' + k.h + '</span>' +
+             '<button class="del" data-del="' + i + '">×</button></li>';
+    }).join('');
+  }
+  document.getElementById('cnt').textContent = SLOTS.length ? '（' + SLOTS.length + '）' : '';
+  updateOut();
+}
+
+function updateOut() {
+  var s = 'H = [' + H.map(function (p) { return '[' + p.join(',') + ']'; }).join(',') + '];\n' +
+          'V = [' + V.map(function (p) { return '[' + p.join(',') + ']'; }).join(',') + '];\n' +
+          'SLOTS = [' + SLOTS.map(function (k) { return '[' + k.x + ',' + k.y + ',' + k.w + ',' + k.h + ']'; }).join(',') + '];';
+  document.getElementById('out').value = s;
+}
+
+/* ---- 拖拽交互 ---- */
+function toSvg(e) {
+  var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+var hit = document.getElementById('hit'), draft = document.getElementById('draft');
+var drag = null;
+
+function hitSlot(p) {
+  for (var i = SLOTS.length - 1; i >= 0; i--) {
+    var k = SLOTS[i];
+    if (p.x >= k.x && p.x <= k.x + k.w && p.y >= k.y && p.y <= k.y + k.h) return i;
+  }
+  return -1;
+}
+
+hit.addEventListener('pointerdown', function (e) {
+  var p = toSvg(e);
+  var i = hitSlot(p);
+  if (i >= 0) {
+    sel = i;
+    drag = { mode: 'move', i: i, ox: p.x - SLOTS[i].x, oy: p.y - SLOTS[i].y, moved: false };
+  } else {
+    sel = -1;
+    drag = { mode: 'new', x0: sn(p.x), y0: sn(p.y), moved: false };
+    draft.style.display = '';
+    draft.setAttribute('x', sn(p.x)); draft.setAttribute('y', sn(p.y));
+    draft.setAttribute('width', 0); draft.setAttribute('height', 0);
+  }
+  renderSlots();
+  hit.setPointerCapture(e.pointerId);
+});
+
+hit.addEventListener('pointermove', function (e) {
+  if (!drag) return;
+  var p = toSvg(e);
+  drag.moved = true;
+  if (drag.mode === 'new') {
+    var x = Math.min(drag.x0, sn(p.x)), y = Math.min(drag.y0, sn(p.y));
+    var w = Math.abs(sn(p.x) - drag.x0), h = Math.abs(sn(p.y) - drag.y0);
+    draft.setAttribute('x', x); draft.setAttribute('y', y);
+    draft.setAttribute('width', w); draft.setAttribute('height', h);
+  } else {
+    SLOTS[drag.i].x = sn(p.x - drag.ox);
+    SLOTS[drag.i].y = sn(p.y - drag.oy);
+    renderSlots();
+  }
+});
+
+hit.addEventListener('pointerup', function (e) {
+  if (!drag) return;
+  if (drag.mode === 'new') {
+    var w = +draft.getAttribute('width'), h = +draft.getAttribute('height');
+    draft.style.display = 'none';
+    if (w >= 12 && h >= 12) {
+      SLOTS.push({ x: +draft.getAttribute('x'), y: +draft.getAttribute('y'), w: w, h: h });
+      sel = SLOTS.length - 1;
+    }
+  }
+  drag = null;
+  renderSlots();
+});
+
+document.addEventListener('keydown', function (e) {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && sel >= 0) {
+    SLOTS.splice(sel, 1); sel = -1; renderSlots(); e.preventDefault();
+  }
+});
+
+document.getElementById('slotList').addEventListener('click', function (e) {
+  var li = e.target.closest('li'); if (!li) return;
+  var d = e.target.getAttribute('data-del');
+  if (d !== null) { SLOTS.splice(+d, 1); sel = -1; renderSlots(); return; }
+  sel = +li.getAttribute('data-i'); renderSlots();
+});
+
+document.getElementById('btnSnap').onclick = function () { snap = !snap; this.classList.toggle('on', snap); this.textContent = '网格吸附 ' + (snap ? '2px' : '关'); };
+document.getElementById('btnPreview').onclick = function () { preview = !preview; this.classList.toggle('on', preview); renderSlots(); };
+document.getElementById('btnUndo').onclick = function () { SLOTS.pop(); sel = -1; renderSlots(); };
+document.getElementById('btnClear').onclick = function () { SLOTS = []; sel = -1; renderSlots(); };
+document.getElementById('btnSnap').classList.add('on');
+
+document.getElementById('fillet').oninput = function () {
+  document.getElementById('filletV').textContent = (+this.value).toFixed(1);
+  buildFrame();
+};
+
+document.getElementById('btnCopy').onclick = function () {
+  var t = document.getElementById('out');
+  t.select();
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (err) {}
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(t.value); ok = true; }
+  document.getElementById('msg').textContent = ok ? '已复制，贴给我就行' : '复制失败，请手动全选复制';
+  setTimeout(function () { document.getElementById('msg').textContent = ''; }, 2600);
+};
+
+buildFrame();
+renderSlots();
+</script>
+</body>
+</html>

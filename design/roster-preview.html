@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>花名册 · 现状 vs 小桌方案</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #F4F5F3;
+    color: #23282A;
+    font: 14px/1.7 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    padding: 26px 26px 40px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 21px; font-weight: 600; letter-spacing: .3px; }
+  .sub { color: #6B7470; font-size: 13px; margin-top: 5px; }
+  .rule { height: 1px; background: #DDE2DE; margin: 18px 0 22px; }
+
+  .cols { display: flex; gap: 26px; flex-wrap: wrap; align-items: flex-start; }
+  .card {
+    background: #FFF;
+    border: 1px solid #DDE2DE;
+    border-radius: 10px;
+    padding: 14px 14px 16px;
+  }
+  .card h2 {
+    font-size: 14px; font-weight: 600;
+    padding-bottom: 8px; margin-bottom: 10px;
+    border-bottom: 1px solid #ECEEEB;
+  }
+  .card h2 em { font-style: normal; color: #6B7470; font-weight: 400; font-size: 12px; margin-left: 6px; }
+  .shot {
+    display: block; width: 100%; border: 1px solid #E4E7E3; border-radius: 6px; background: #FAFBF9;
+  }
+  .cap { color: #5C6663; font-size: 12.5px; margin-top: 9px; }
+  .cap b { color: #2E6B4A; font-weight: 600; }
+
+  .stack { width: 300px; flex: none; }
+  .wide  { flex: 1 1 380px; min-width: 340px; }
+
+  table { width: 100%; border-collapse: collapse; margin-top: 22px; background: #FFF;
+          border: 1px solid #DDE2DE; border-radius: 10px; overflow: hidden; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #ECEEEB; font-size: 13px; vertical-align: top; }
+  th { background: #EFF2EE; font-weight: 600; width: 150px; color: #38413E; }
+  tr:last-child td, tr:last-child th { border-bottom: none; }
+  td .now { color: #6B7470; }
+  td .aft { color: #2E6B4A; }
+
+  .notes { margin-top: 20px; font-size: 13px; color: #55605C; }
+  .notes li { margin-left: 18px; }
+  .tag {
+    display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 4px;
+    background: #E7EFE9; color: #2E6B4A; margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>花名册：就用「胶囊按钮 + 抽屉」</h1>
+  <p class="sub">小桌方案已否决（她说"还是很丑"）—— 现在这套保持不变。右边那张只留档，不再往渲染器里画。</p>
+  <div class="rule"></div>
+
+  <div class="cols">
+
+    <!-- 左：现状两张 -->
+    <div class="card stack">
+      <h2>现在 <em>已经能用</em></h2>
+      <img class="shot" src="preview-15-shelf-now.png" alt="书架页现状">
+      <p class="cap">
+        <b>① 入口</b>是架子下面那颗「花名册」胶囊 —— 临时的。<br>
+        书脊上写不下全名的书只印圈号，写得下的照旧竖排写全名。
+      </p>
+      <img class="shot" src="preview-14-roster-now.png" alt="花名册抽屉" style="margin-top:12px">
+      <p class="cap">
+        <b>② 抽屉</b>只列被编号的那几本（这屏 12 本里 5 本）。<br>
+        每行「圈号 + 书名 + 进度」，点一行直接进阅读。<br>
+        一本编号的都没有时不空着，写「暂时不用对号」。
+      </p>
+    </div>
+
+    <!-- 右：小桌方案 -->
+    <div class="card wide">
+      <h2>小桌定稿后 <em>设计稿，还没进渲染器</em></h2>
+      <img class="shot" src="preview-10-roster-c4.png" alt="小桌 C 案精细版">
+      <p class="cap">
+        <b>③</b> 矮几摆在架子正前方偏左，册子平放在桌面上 —— 入口从胶囊按钮换成<b>点桌上的册子</b>，
+        打开的还是下面那个抽屉。<br>
+        目前这一版的特征：六列 details 都已加齐（拼板缝、桌面出檐、裙边切角、桌腿收分、桌下暗部、册子投影与页口线），
+        视角是两次抬高后的版本（桌面进深 62、后缘宽 170），配色全程冷调灰绿月白，没掺暖黄。
+      </p>
+    </div>
+
+  </div>
+
+  <table>
+    <tr><th>入口</th><td><span class="now">现在：架子底下的「花名册」胶囊按钮</span><br><span class="aft">定稿后：架子前小桌上的册子（同时撤掉胶囊按钮）</span></td></tr>
+    <tr><th>抽屉内容</th><td>只列书脊上编号的书（大名太长放不进 15px 的书脊才有编号）。册子内容跟入口形式无关，两种都一样。</td></tr>
+    <tr><th>谁会编号</th><td>书名洗掉书名号括号后仍 &gt; 4 字的。编号按导入时间只在这些书里连排，不断号。</td></tr>
+    <tr><th>长书名</th><td>抽屉/列表/选书面板三处都改成左右滚动，不再截断。</td></tr>
+    <tr><th>工作量</th><td>抽屉逻辑一行都不用改。只需要给 shelf.js 新写一段 SVG（桌子 + 册子）并给册子挂点击热区。</td></tr>
+  </table>
+
+  <ul class="notes">
+    <li><span class="tag">注意</span>左边那三张是模拟渲染（尺寸按 390×844 钉死），右边那张是纯设计稿 —— 小桌还没进书架页，所以<b>没有"合在一起的实拍"</b>。</li>
+    <li><span class="tag">可选</span>要真看合成后的样子，我可以先把小桌画进 shelf.js 渲一版给你看；不满意就把那段撤掉，抽屉逻辑不动。</li>
+  </ul>
+
+</div>
+</body>
+</html>

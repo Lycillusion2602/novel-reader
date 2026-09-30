@@ -1,0 +1,12 @@
+# 行尾规矩在这台 Windows 上是硬需求：
+#   .bat 必须是 CRLF（cmd.exe 对 LF 的批处理会莫名中断），
+#   gradlew 必须是 LF（CRLF 会让 sh 报 bad interpreter），
+#   编码夹具是 GBK 字节，一旦被当文本做行尾转换就直接废掉。
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.jar binary
+*.apk binary
+*.aab binary
+*.png binary
+tools/fixtures/gbk.txt binary

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!-- 只做一件事：把书架渲出来，量书脊宽高 + 检查书名有没有压到装饰白边。
+     书脊最上有书顶高光和堵头布（约到 by+4.7），最下有堵头布和落板暗部（约 bottom-7.3），
+     安全区是 by+8 ~ bottom-9（编辑态 by+16）。这里逐个 <text> 量它的实际占位。
+     不参与打包。 -->
+<html><head><meta charset="utf-8"><title>bk measure</title></head>
+<body>
+<div id="host" style="width:400px;height:400px"></div>
+<pre id="OUT">pending</pre>
+<script src="../www/js/shelf.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var N = +(q.get('n') || 24);
+  var EDIT = q.get('edit') === '1';
+  var NAMES = ['三体','活着','百年孤独','明朝那些事儿','平凡的世界','小王子','围城','白夜行',
+    '解忧杂货店','人类简史','沉默的大多数','许三观卖血记','追风筝的人','房思琪的初恋乐园',
+    '红楼梦','西游记','茶馆','边城','老人与海','月亮与六便士','局外人','鼠疫','罪与罚','繁花'];
+  var books = [], i;
+  for (i = 0; i < N; i++) {
+    books.push({ id: 'b' + i, title: NAMES[i % NAMES.length], pct: (i * 17) % 100, no: i + 1 });
+  }
+  var infos = Shelf.slotInfo(), layout = {}, k = 0;
+  for (i = 0; i < infos.length && k < N; i++) {
+    layout[infos[i].id] = [];
+    for (var j = 0; j < infos[i].cap && k < N; j++) layout[infos[i].id].push(books[k++].id);
+  }
+  var res = Shelf.render(document.getElementById('host'), { items: books, layout: layout, edit: EDIT });
+
+  var gs = document.querySelectorAll('#host .bk');
+  var ws = [], bad = [], samples = [];
+  for (i = 0; i < gs.length; i++) {
+    var g = gs[i];
+    var r = g.querySelector('rect');
+    var x = +r.getAttribute('x'), y = +r.getAttribute('y');
+    var w = +r.getAttribute('width'), h = +r.getAttribute('height');
+    ws.push(w);
+    var top = y, bottom = y + h;
+    var safeT = top + (EDIT ? 16 : 8), safeB = bottom - 9;
+    var ts = g.querySelectorAll('text');
+    for (var t = 0; t < ts.length; t++) {
+      var ty = +ts[t].getAttribute('y'), fs = +ts[t].getAttribute('font-size');
+      var glyphTop = ty - fs * 0.92;      // 基线往上约一个字身
+      var glyphBot = ty + fs * 0.14;      // 基线往下一点（含降部）
+      if (glyphTop < safeT - 0.6 || glyphBot > safeB + 0.6) {
+        bad.push(g.getAttribute('data-title') + ' 字' + ts[t].textContent +
+                 ' top=' + glyphTop.toFixed(1) + '(限' + safeT.toFixed(1) + ')' +
+                 ' bot=' + glyphBot.toFixed(1) + '(限' + safeB.toFixed(1) + ')');
+      }
+    }
+    if (i < 6) samples.push(g.getAttribute('data-title') + ' w=' + w.toFixed(1) +
+      ' h=' + h.toFixed(1) + ' 字数=' + g.querySelectorAll('text').length +
+      ' 字号=' + (g.querySelector('text') ? g.querySelector('text').getAttribute('font-size') : '-'));
+  }
+  var uniq = {}; ws.forEach(function (v) { uniq[v] = 1; });
+  document.getElementById('OUT').textContent = JSON.stringify({
+    edit: EDIT, placed: res.placed, capacity: res.capacity,
+    widthKinds: Object.keys(uniq).length,
+    widthMin: Math.min.apply(null, ws), widthMax: Math.max.apply(null, ws),
+    textOutOfBand: bad.length, violations: bad.slice(0, 8),
+    samples: samples
+  }, null, 1);
+})();
+</script>
+</body></html>

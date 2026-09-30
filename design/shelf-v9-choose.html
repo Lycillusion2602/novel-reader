@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 去掉哪根竖撑？</title>
+<style>
+:root {
+  --page: #EDEDEA; --card: #FFFFFF; --ink: #1E3D2C; --accent: #2E6B4A;
+  --muted: #9A9A95; --line: #E9E9E5;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #DEDEDB; color: #22221F;
+  min-height: 100vh; padding: 22px 16px 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+}
+.hint { font-size: 13px; color: #5F6663; text-align: center; max-width: 640px; line-height: 1.85; }
+.hint b { color: var(--ink); }
+
+.grid {
+  display: grid; grid-template-columns: repeat(2, 260px); gap: 18px;
+  justify-content: center;
+}
+.opt { text-align: center; }
+.opt svg { display: block; }
+.opt .tag {
+  margin-top: 8px; font-size: 12.5px; color: var(--ink); font-weight: 600; letter-spacing: .5px;
+}
+.opt .desc { margin-top: 3px; font-size: 11px; color: var(--muted); line-height: 1.6; }
+.opt .warn { color: #A66; font-size: 10.5px; margin-top: 3px; }
+</style>
+</head>
+<body>
+
+<p class="hint">
+现在是 <b>4 根竖撑</b>。下面四种分别是去掉其中一根的样子，<b>看好哪个直接说编号</b>。<br>
+（横板一根没变，只动竖撑）
+</p>
+
+<div class="grid" id="grid"></div>
+
+<script>
+var T = 8;
+
+var H = [
+  [ 44, 157, 192],
+  [250, 294, 335],
+  [ 43, 240, 250],
+  [ 83, 315, 177],
+  [192, 131, 285],
+  [229, 204, 366]
+];
+var V = [
+  [192,  40, 157],
+  [285, 131, 204],
+  [137, 157, 315],
+  [250, 204, 294]
+];
+var NAMES = [
+  ['去掉 ①', '顶部从圆顶吊下来那根'],
+  ['去掉 ②', '右上那根（连着上板和右中板）'],
+  ['去掉 ③', '左侧贯穿那根（最长，从上到下）'],
+  ['去掉 ④', '右下那根（连着右中板和右下板）']
+];
+var WARNS = [
+  '',
+  '',
+  '注意：左下托板会失去支撑，变成悬空',
+  '注意：右中板和右下板之间会断开'
+];
+
+function svgOf(hh, vv, id) {
+  var body = '';
+  hh.forEach(function (p) {
+    var x = Math.min(p[0], p[2]), y = p[1], w = Math.abs(p[2] - p[0]);
+    body += '<rect x="' + x + '" y="' + (y - T / 2) + '" width="' + w + '" height="' + T + '" rx="1"/>';
+  });
+  vv.forEach(function (p) {
+    var x = p[0], y = Math.min(p[1], p[2]), h = Math.abs(p[2] - p[1]);
+    body += '<rect x="' + (x - T / 2) + '" y="' + y + '" width="' + T + '" height="' + h + '" rx="1"/>';
+  });
+  return '<svg width="260" height="260" viewBox="0 0 400 400">' +
+    '<defs>' +
+      '<radialGradient id="bg' + id + '" cx="0.4" cy="0.34" r="0.78">' +
+        '<stop offset="0" stop-color="#DBE5DC"/><stop offset="1" stop-color="#C9D7CB"/></radialGradient>' +
+      '<linearGradient id="pg' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.62" stop-color="#FBFCFA"/>' +
+        '<stop offset="1" stop-color="#EDF1ED"/></linearGradient>' +
+      '<filter id="bl' + id + '" x="-25%" y="-25%" width="150%" height="160%">' +
+        '<feGaussianBlur stdDeviation="1.6"/></filter>' +
+      '<clipPath id="in' + id + '"><circle cx="200" cy="200" r="168"/></clipPath>' +
+    '</defs>' +
+    '<circle cx="200" cy="200" r="177" fill="#FFFFFF"/>' +
+    '<circle cx="200" cy="200" r="169.5" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.22"/>' +
+    '<circle cx="200" cy="200" r="168" fill="url(#bg' + id + ')"/>' +
+    '<g clip-path="url(#in' + id + ')">' +
+      '<g filter="url(#bl' + id + ')" opacity="0.42">' +
+        '<g fill="#7E9484" transform="translate(1.7,3.4)">' + body + '</g></g>' +
+      '<g fill="url(#pg' + id + ')">' + body + '</g>' +
+    '</g>' +
+  '</svg>';
+}
+
+var html = '';
+V.forEach(function (_, k) {
+  var vv = V.filter(function (__, i) { return i !== k; });
+  html += '<div class="opt">' + svgOf(H, vv, k) +
+          '<div class="tag">' + NAMES[k][0] + '</div>' +
+          '<div class="desc">' + NAMES[k][1] + '</div>' +
+          (WARNS[k] ? '<div class="warn">' + WARNS[k] + '</div>' : '') +
+          '</div>';
+});
+document.getElementById('grid').innerHTML = html;
+</script>
+</body>
+</html>

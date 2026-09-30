@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 纸白（默认主题的底色）。万一 WebView 哪里透了，露出来的是它而不是纯白 -->
+    <color name="appWindowBg">#F5F2EA</color>
+</resources>

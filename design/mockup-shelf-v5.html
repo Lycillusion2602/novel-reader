@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="moon">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>砚读 · 书架 v5（VARIANCE 6）</title>
+<style>
+/* 冷调。规则：阴影永远带背景色相，不用纯黑 */
+:root {
+  --bg: #E8EAE9;
+  --surface: #F1F2F1;
+  --ink: #1B2124;
+  --ink-soft: #5C6669;
+  --ink-faint: #97A0A2;
+  --accent: #2E5A5F;
+  --seal: #8C3B32;
+  --line: rgba(27,33,36,.1);
+  --sh: rgba(38,58,62,.22);          /* 带青调的阴影，不是纯黑 */
+  --sh-soft: rgba(38,58,62,.13);
+  --serif: "Songti SC", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", serif;
+}
+[data-theme="ink"] {
+  --bg: #111517;
+  --surface: #1B2124;
+  --ink: #DCE2E2;
+  --ink-soft: #96A1A3;
+  --ink-faint: #667275;
+  --accent: #7FB0B4;
+  --seal: #B5584C;
+  --line: rgba(220,226,226,.1);
+  --sh: rgba(0,0,0,.5);
+  --sh-soft: rgba(0,0,0,.34);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--serif); background: #CDD2D1; color: var(--ink);
+  min-height: 100vh; padding: 22px 16px 60px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  transition: background .3s;
+}
+[data-theme="ink"] body { background: #07090A; }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; }
+.seg { display: flex; background: #fff; border-radius: 10px; padding: 4px; gap: 2px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+[data-theme="ink"] .seg { background: #1B2124; }
+.seg button {
+  border: none; background: none; font-family: var(--serif);
+  padding: 7px 13px; border-radius: 7px; font-size: 12.5px;
+  color: var(--ink-soft); cursor: pointer; transition: .18s;
+}
+.seg button.on { background: var(--accent); color: #fff; }
+.seg button:hover:not(.on) { background: rgba(0,0,0,.05); }
+[data-theme="ink"] .seg button:hover:not(.on) { background: rgba(255,255,255,.06); }
+.hint { font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 700px; line-height: 1.9; }
+
+.phone {
+  width: 375px; height: 800px; background: var(--bg);
+  border-radius: 40px; overflow: hidden; position: relative; flex: none;
+  box-shadow: 0 0 0 11px #12151A, 0 0 0 13px #2C3238, 0 30px 60px rgba(0,0,0,.34);
+  transition: background .3s;
+}
+.grain {
+  position: absolute; inset: 0; pointer-events: none; z-index: 6; opacity: .28;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.2'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+[data-theme="ink"] .grain { mix-blend-mode: overlay; opacity: .2; }
+.statusbar {
+  height: 46px; display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 0 22px 7px; font-size: 12.5px; color: var(--ink); position: relative; z-index: 7; flex: none;
+}
+.screen { height: calc(100% - 46px); overflow-y: auto; position: relative; }
+
+/* ============ 头部：左对齐，反居中 ============ */
+.head {
+  padding: 10px 22px 16px; display: flex; align-items: flex-end; gap: 10px;
+}
+.head h1 {
+  font-size: 30px; font-weight: 600; letter-spacing: 6px; line-height: 1;
+}
+.head .sub {
+  font-size: 11px; color: var(--ink-faint); letter-spacing: 1px;
+  padding-bottom: 3px; margin-left: auto;
+}
+
+/* ============ 书架：出血，无左右边距 ============ */
+.case { padding-top: 4px; }
+
+.shelf { position: relative; padding: 0 0 0 20px; }
+.books {
+  display: flex; align-items: flex-end; gap: 4px;
+  min-height: 132px; padding-top: 8px;
+  overflow-x: auto;                    /* 书多时这一层可横向滚 */
+  scrollbar-width: none;
+}
+.books::-webkit-scrollbar { display: none; }
+/* 出血：右侧故意被裁掉，不收边 */
+.shelf.bleed .books { padding-right: 0; margin-right: -14px; }
+
+.spine {
+  position: relative; flex: none; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 9px 0 8px;
+  border-radius: 1px;
+  box-shadow: inset -3px 0 7px rgba(0,0,0,.26), 3px 3px 9px var(--sh);
+  transition: transform .24s cubic-bezier(.2,.8,.3,1);
+}
+.spine .sname {
+  writing-mode: vertical-rl; text-orientation: upright;
+  color: #EDEEEC; font-size: 11px; letter-spacing: 2px;
+  text-shadow: 0 1px 1px rgba(0,0,0,.36);
+  overflow: hidden; text-overflow: ellipsis; max-height: 94px;
+}
+.spine.thin .sname { font-size: 9px; letter-spacing: .5px; }
+.spine.thick .sname { font-size: 12.5px; letter-spacing: 3px; }
+.spine .band { width: 100%; height: 2px; background: rgba(255,255,255,.2); margin-top: auto; }
+.spine .band.t { margin: 0 0 auto; }
+.spine .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--seal); margin-top: 6px; flex: none; }
+.spine .tip {
+  position: absolute; left: 50%; transform: translateX(-50%); top: -25px;
+  white-space: nowrap; font-size: 10.5px; background: var(--ink); color: var(--bg);
+  padding: 3px 9px; border-radius: 2px; opacity: 0; transition: .18s; pointer-events: none; z-index: 30;
+}
+.spine:hover .tip { opacity: 1; }
+.spine:hover { transform: translateY(-7px); }
+
+/* 唯一打破秩序的那本：抽出来斜靠 */
+.lean {
+  position: relative; height: 132px; flex: none;
+  display: flex; align-items: flex-end;
+}
+.lean .spine {
+  transform-origin: bottom left;
+  transform: rotate(9deg);
+  box-shadow: -6px 6px 16px var(--sh), inset -3px 0 7px rgba(0,0,0,.26);
+  height: 126px;
+}
+.lean .cap {
+  position: absolute; left: 0; bottom: -19px;
+  writing-mode: horizontal-tb; white-space: nowrap;
+  font-size: 10px; color: var(--accent); letter-spacing: 2px;
+}
+.lean .cap b { font-weight: 600; }
+
+/* 层板：细线 + 柔和投影，不再是厚木板 */
+.board {
+  height: 1px; margin: 0 20px 0 20px;
+  background: var(--line);
+  position: relative;
+}
+.board::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 1px; height: 8px;
+  background: linear-gradient(180deg, var(--sh-soft), transparent);
+}
+.shelf.bleed .board { margin-right: 0; }
+
+/* 层内提示（克制：整页最多两处） */
+.note {
+  padding: 16px 22px 5px; font-size: 10.5px;
+  color: var(--ink-faint); letter-spacing: 2px;
+}
+
+/* 底部 */
+.footpad { height: 76px; }
+.fab {
+  position: absolute; right: 20px; bottom: 22px; width: 52px; height: 52px;
+  border-radius: 50%; background: var(--accent); color: #fff;
+  display: grid; place-items: center; border: none; z-index: 20;
+  box-shadow: 0 4px 14px var(--sh);
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="seg" id="themeSeg">
+    <button class="on" data-theme="moon">月白</button>
+    <button data-theme="ink">墨</button>
+  </div>
+  <div class="seg" id="countSeg">
+    <button class="on" data-count="12">12 本</button>
+    <button data-count="40">40 本</button>
+  </div>
+</div>
+
+<p class="hint">
+VARIANCE 6：大体整齐，但故意留下意外。<br>
+<b>左对齐</b>（不居中）· <b>出血</b>（右边被裁）· <b>厚薄悬殊</b>（9 万字 vs 300 万字）· <b>一层大片留白</b> · <b>在读那本斜靠着</b> · 层板只剩一根细线 · 阴影带青调不用纯黑
+</p>
+
+<div class="phone">
+  <div class="grain"></div>
+  <div class="statusbar"><span>18:00</span><span>—</span></div>
+  <div class="screen" id="screen">
+    <div class="head">
+      <h1>砚读</h1>
+      <span class="sub" id="sub">12 卷 · 在读 1</span>
+    </div>
+    <div id="case" class="case"></div>
+    <div class="footpad"></div>
+  </div>
+  <button class="fab"><svg viewBox="0 0 24 24" style="width:23px;height:23px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:round"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
+
+<script>
+/* 字数差距拉开：9 万字的小册子和 300 万字的巨部并置 */
+var LIB = [
+  ['雪中悍刀行', 128, 62], ['斗破苍穹', 533, 100], ['庆余年', 98, 18],
+  ['诡秘之主', 372, 44], ['明朝那些事儿', 96, 7], ['三体', 88, 100],
+  ['活着', 12, 0], ['百年孤独', 26, 100], ['平凡的世界', 104, 31],
+  ['白夜行', 35, 100], ['人类简史', 45, 12], ['当我谈跑步时我谈些什么', 15, 8],
+  ['你一生的故事', 18, 100], ['置身事内：中国政府与经济发展', 32, 23],
+  ['万历十五年', 21, 100], ['乡土中国', 9, 0], ['沉默的大多数', 28, 66],
+  ['许三观卖血记', 17, 100], ['长夜难明', 24, 91], ['房思琪的初恋乐园', 11, 100],
+  ['娱乐至死', 14, 100], ['叫魂：1768年中国妖术大恐慌', 26, 5],
+  ['枪炮、病菌与钢铁', 42, 17], ['万历野获编', 60, 2], ['资治通鉴', 300, 1],
+  ['全宋词', 180, 3], ['红楼梦', 107, 100], ['西游记', 82, 74],
+  ['水浒传', 96, 12], ['三国演义', 75, 100], ['儒林外史', 38, 0],
+  ['聊斋志异', 48, 9], ['封神演义', 65, 0], ['镜花缘', 40, 0],
+  ['老残游记', 15, 0], ['孽海花', 22, 0], ['二十年目睹之怪现状', 55, 0],
+  ['官场现形记', 50, 0], ['醒世姻缘传', 80, 0], ['金瓶梅', 90, 0]
+];
+
+function hue(t) { var h = 0; for (var i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0; return h % 360; }
+/* 冷调布面：压到青—蓝—紫，避开黄橙 */
+function cloth(h) {
+  var hh = (h % 150) + 175;
+  return 'linear-gradient(158deg, hsl(' + hh + ' 21% 37%), hsl(' + ((hh + 16) % 360) + ' 25% 22%))';
+}
+/* 宽度非线性：拉开厚薄对比，而不是平均映射 */
+function width(wan) {
+  var w = 13 + Math.sqrt(Math.min(wan, 400)) * 1.75;
+  return Math.round(w);
+}
+function shortName(t) { return t.length > 9 ? t.slice(0, 8) + '…' : t; }
+function spine(b, extra) {
+  var wan = b[1], p = b[2], t = b[0];
+  var w = width(wan);
+  var cls = w >= 34 ? 'thick' : (w <= 17 ? 'thin' : '');
+  return '<div class="spine ' + cls + (extra || '') + '" style="width:' + w + 'px;background:' + cloth(hue(t)) + '">' +
+    '<span class="band t"></span>' +
+    '<span class="sname">' + shortName(t) + '</span>' +
+    (p > 0 && p < 100 ? '<span class="dot"></span>' : '') +
+    '<span class="band"></span>' +
+    '<span class="tip">' + t + ' · ' + wan + ' 万字 · ' + (p ? p + '%' : '未读') + '</span>' +
+    '</div>';
+}
+
+var CUR = 12;
+
+function render() {
+  var books = LIB.slice(0, CUR);
+  var html = '';
+
+  /* 第一层：在读的那本斜靠着，右边出血 */
+  html += '<div class="shelf bleed">' +
+    '<div class="books">' +
+      '<div class="lean">' + spine(books[0]) +
+        '<span class="cap">在读 · <b>62%</b></span>' +
+      '</div>' +
+      spine(books[1]) + spine(books[2]) + spine(books[3]) + spine(books[4]) +
+    '</div><div class="board"></div></div>';
+
+  /* 第二层：厚薄悬殊，且右边大片留白 */
+  html += '<div class="shelf"><div class="books">' +
+    spine(books[5]) + spine(books[6]) + spine(books[7]) + spine(books[8]) +
+    '</div><div class="board"></div></div>';
+
+  /* 第三层：只剩两本孤零零立着，大片虚室 */
+  html += '<div class="shelf"><div class="books">' +
+    spine(books[9]) + spine(books[10]) +
+    '</div><div class="board"></div></div>';
+
+  /* 剩下的：常规排布 */
+  if (books.length > 11) {
+    var rest = '';
+    for (var i = 11; i < books.length; i++) rest += spine(books[i]);
+    html += '<div class="shelf bleed"><div class="books">' + rest + '</div><div class="board"></div></div>';
+  }
+
+  document.getElementById('case').innerHTML = html;
+  document.getElementById('sub').textContent = CUR + ' 卷 · 在读 1';
+}
+render();
+
+function bindSeg(id, key, fn) {
+  document.getElementById(id).addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(this.children, function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    fn(b.dataset[key]);
+  });
+}
+bindSeg('themeSeg', 'theme', function (t) { document.documentElement.setAttribute('data-theme', t); });
+bindSeg('countSeg', 'count', function (c) { CUR = +c; render(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "appId": "com.yuanchuan.yandu",
+  "appName": "砚读",
+  "webDir": "www",
+  "loggingEnabled": false,
+  "android": {
+    "webContentsDebuggingEnabled": true
+  }
+}
