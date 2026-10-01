@@ -1992,6 +1992,9 @@
     clearTimeout(pendingTimer);
     contentEl().innerHTML = '';
     readerEl().scrollTop = 0;
+    /* 这一处也得登记：重画整条卷轴时把视口归零，是我们自己写的。
+       漏了的话，每次换书/跳远章都会白挨一次"人滑了 → 自动翻页让位 1.2 秒"。 */
+    markProgScroll();
     readerEl().classList.toggle('paged', paged());   // 分页模式下不让手指自由滚
 
     return loadChapter(state.index, 'append').then(function (blk) {
