@@ -109,16 +109,22 @@
 
   /* 我们自己写 scrollTop 的地方一共五处：自动翻页推进、preserve 的视线补偿、
      applyPendingTop 落位、moveTo 跳章、smoothScrollTo 的每一帧插值。
-     ⚠️ 这些都必须登记，不然 scroll 回调分不出"是人在滑"还是"是我们自己动的"：
-        自动翻页开着时，接一章 → preserve 把视口往下带 → 回调以为人滑了 →
-        autoPauseUntil 顶到 1.2 秒之后 → 自动翻页自己停下来 ——
-        表现就是"每过一章就顿一下"，而且栏也会跟着乱收乱放的判断来源。
-        （以前只有 autoStep 这一个标记，只盖住了自动翻页那一处，另外四处全漏。）
-     只登记一个时间戳，不登记标记位：scroll 事件是**异步**送过来的，
-     布尔标记在这一帧置真、下一帧就被别人读走了，时间窗才接得住。 */
-  var progStamp = 0;
-  function markProgScroll() { progStamp = Date.now(); }
-  function justProgScroll() { return Date.now() - progStamp < 150; }
+     ⚠️ scroll 回调必须分得清"是人在滑"还是"是我们自己动的"：前者要让自动翻页让位
+        （不然两边对着拽），后者不该。以前只有一个 autoStep 标记，只盖住了自动翻页
+        那一处，另外四处全漏 → 自动翻页每接一次章就自己停 1.2 秒。
+
+     ⚠️ 但**别用时间窗判**（"离上一次写入不到 150ms 就算程序写的"）：自动翻页每 16ms
+        就写一次，时间窗被它自己一直续期，真人的滑动反而永远识别不出来 ——
+        等于把"让位"整个废掉。（这条是我自己先写成时间窗，被 selftest C6 的
+        控制组照出来的：人在滑，autoPaused 却不亮。）
+        现在记的是**上一次写进去、并且回读到的那个值**：事件到来时当前位置还等于它，
+        就是我们自己动的；差出去 2px 以上，就是别人（人）挪的。
+        写完再回读，是因为越界的目标值会被浏览器夹住，只有回读才是真落点。 */
+  var progTop = null;
+  function markProgScroll() { progTop = readerEl().scrollTop; }
+  function looksProgrammatic() {
+    return progTop !== null && Math.abs(readerEl().scrollTop - progTop) <= 2;
+  }
 
   /* ---------------- 通用 ---------------- */
   function showPage(name) {
@@ -459,7 +465,7 @@
     var el = readerEl();
     var start = el.scrollTop;
     stopSmooth();
-    if (Math.abs(y - start) < 40) { markProgScroll(); el.scrollTop = y; return; }
+    if (Math.abs(y - start) < 40) { el.scrollTop = y; markProgScroll(); return; }
     smoothTo = y;
     var dur = Math.min(430, 170 + Math.abs(y - start) * 0.22);
     var t0 = 0;
@@ -468,8 +474,8 @@
       if (!t0) t0 = ts;
       var p = Math.min(1, (ts - t0) / dur);
       var e = 1 - Math.pow(1 - p, 3);
-      markProgScroll();                            // 动画每帧都在写 scrollTop，每帧都得登记
       el.scrollTop = start + (smoothTo - start) * e;
+      markProgScroll();                            // 动画每帧都在写 scrollTop，每帧都要登记（写完登记）
       if (p < 1) { smoothRaf = requestAnimationFrame(step); }
       else { smoothRaf = 0; smoothTo = null; }
     })(performance.now ? performance.now() : Date.now());
@@ -553,13 +559,13 @@
     var el = readerEl();
     var mode = state.settings.pageTurn || 'vscroll';
     if (mode === 'smooth') { smoothScrollTo(y); return; }
-    if (mode === 'vscroll' || Math.abs(y - el.scrollTop) < 40) { markProgScroll(); el.scrollTop = y; return; }
+    if (mode === 'vscroll' || Math.abs(y - el.scrollTop) < 40) { el.scrollTop = y; markProgScroll(); return; }
 
     /* 覆盖 / 仿真：先拍下"旧的一屏"，让位置瞬间到位，再让"新的一屏"滑上来 */
     fxClear();
     var old = fxSnapshot('fx-old');
-    markProgScroll();
     el.scrollTop = y;
+    markProgScroll();
     var fresh = fxSnapshot('fx-new ' + (mode === 'sim' ? 'fx-sim' : 'fx-cover'));
     if (!old && !fresh) return;               // 屏上没东西（极端情况），别动画了
 
@@ -613,8 +619,8 @@
         /* 到底了：还能接着下一章就接，接不上就是真读完了 —— 停下并说一声 */
         if (!nextChapter()) { stopAutoPage(true); return; }
       } else {
-        markProgScroll();                  // 这一下是自动翻页推的，不是人滑的
         el.scrollTop += px;
+        markProgScroll();                  // 这一下是自动翻页推的，不是人滑的（写完再登记）
       }
     }
     autoRaf = rafAuto();
@@ -1603,8 +1609,8 @@
     var b1 = r.top - el.getBoundingClientRect().top + el.scrollTop;
     var d = b1 - b0;
     if (!d) return;
-    markProgScroll();
     el.scrollTop += d;
+    markProgScroll();
     /* 平滑滚动正在跑的话，目标也得跟着挪这么多 ——
        不然补偿完的位置跟动画要去的旧目标对不上，看着就是"点了没反应"。 */
     if (smoothTo !== null) smoothTo += d;
@@ -1956,8 +1962,8 @@
       state.pendingWant = null;
       return;
     }
-    markProgScroll();
     el.scrollTop = want;
+    markProgScroll();
     w.lastTop = el.scrollTop;
     /* ⚠️ 只有**真的落在目标上**才算完成，用绝对值判 ——
        写成 `scrollTop >= want - 2` 的话，被夹到比 want 更大时也成立，
@@ -3140,11 +3146,9 @@
         if (!state.book) return;
         /* 自动翻页开着的时候，是人滑的还是我们自己动的必须分清楚：
            人一滑就先让自动翻页让位一会儿（1.2 秒），不然两边对着拽。
-           ⚠️ 判据是"离上一次我们自己写 scrollTop 超过 150ms 没有"，不是 autoStep
-              那一个标记 —— 补段落时 preserve 的视线补偿、打开书的落位、跳章落位，
-              全都在写 scrollTop，那些都不是人滑的（以前它们一律被当成"人滑了"，
-              于是自动翻页每接一次章就自己停 1.2 秒）。 */
-        var byUser = !justProgScroll();
+           判据见文件头 looksProgrammatic 那段：拿当前位置和"上一次我们自己写进去的值"比，
+           差出去 2px 以上就是别人挪的。 */
+        var byUser = !looksProgrammatic();
         if (byUser && state.settings.autoPage) state.autoPauseUntil = Date.now() + 1200;
         var snap = snapshot();
         if (maintain(snap)) snap = snapshot();
@@ -3217,6 +3221,9 @@
       state.pendingWant = null;    // 手指来了："欠着的那个位置"作废，别把人拽回去
       stopFill();                  // 后台续排也停：人要读了，不跟他抢主线程
       stopSmooth();                // 平滑滚动也一样：人要自己滑了，别再推
+      /* 手指按下是最确定不过的"人在动"，让位直接在这里给，
+         别等 scroll 事件去归因 —— 自动翻页每帧都在写 scrollTop，归因会输给它。 */
+      if (state.settings.autoPage) state.autoPauseUntil = Date.now() + 1200;
     }, { passive: true });
     body.addEventListener('touchend', function (e) {
       var t = e.changedTouches[0];

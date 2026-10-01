@@ -22,20 +22,15 @@
 var log = [];
 var notes = [];
 var outEl = null;
-var running = '';
 
-/* 每跑完一条就把已有结果写进 #ACTOUT；再加一道 2 秒心跳 ——
-   万一某一条卡住（await 永远不回来），外面用 CDP 读 #ACTOUT 就能看到
-   "跑到第几条、最后完成的是哪条"，从而定位卡在哪一条，而不是干等。
-   URL 上加 ?c=1,2,3 可以只跑其中几条（定位卡调用，一次别跑全表）。 */
+/* 每跑完一条就把已有结果写进 #ACTOUT，外加一道 2 秒心跳。
+   这套的存在理由：这次有一条用例把页面主线程占死了，脚本永远不返回，
+   cdp-run 那边一行输出都拿不到 —— 有了"边跑边写 + 心跳"，
+   外面另开一条 CDP 连接读 #ACTOUT 就能看到"最后完成的是第几条"，
+   从而定位卡在哪一条。（主线程彻底占死时连 evaluate 都不回，
+   那时候的招是把统计写进 document.title，从 /json/list 读，见 README 4.17。）
+   ⚠️ 连着跑两轮 cdp-run 记得换 CDP_PORT，上一轮的 headless Edge 没退干净会顶着旧端口。 */
 setInterval(flush, 2000);
-var ONLY = (function () {
-  var m = /[?&]c=([\d,b]+)/.exec(location.search);
-  return m ? m[1].split(',') : null;
-})();
-function shouldRun(tag) {
-  return !ONLY || ONLY.some(function (x) { return tag.toUpperCase().indexOf(x.toUpperCase()) === 0; });
-}
 function flush() {
   if (!outEl) {
     outEl = document.getElementById('ACTOUT');
@@ -43,7 +38,6 @@ function flush() {
   }
   var rep = {
     跑到: log.length,
-    正在跑: running,
     通过: log.filter(function (x) { return x.判定 === '✓'; }).length,
     未通过: log.filter(function (x) { return x.判定 !== '✓'; }).length,
     结果: log,
@@ -52,9 +46,6 @@ function flush() {
   outEl.textContent = 'ACTOUTSTART' + JSON.stringify(rep, null, 1) + 'ACTOUTEND';
   return rep;
 }
-
-/* 每条用例开始前打个点：卡住的时候一眼看出卡在哪一条 */
-function start(tag) { running = tag; outEl = null; flush(); }
 
 function rec(用例, 判定, 实测) {
   log.push({ 用例: 用例, 判定: 判定 ? '✓' : '✗ 未通过', 实测: 实测 });
@@ -321,21 +312,50 @@ async function run() {
   tap(id('sp-exit'));
   await sleep(500);
 
-  /* ===== C6 程序化改 scrollTop 不该被当成「人一滑」 ===== */
-  var canSeePause = 'autoPaused' in window.__reader();
-  if (!canSeePause) {
-    note('C6 判据不可用：window.__reader() 还没暴露 autoPaused');
+  /* ===== C6 程序化写 scrollTop 不该被当成「人一滑」 =====
+     ⚠️ 这条一开始写成了空断言：只在自动翻页**关着**的时候读 autoPaused，
+        而那个标志只有 `byUser && state.settings.autoPage` 才会被置起来 ——
+        自动翻页关着时它恒为 false，怎么测都"通过"。
+        现在两侧都验：先验"人滑一下确实会让位"（证明判据是活的），
+        再验"重开那一串落位/补偿不算人滑"（旧代码在这里就是会被打断）。 */
+  if (!('autoPaused' in window.__reader())) {
+    note('C6 判据不可用：__reader() 里还没有 autoPaused 字段');
   } else {
+    /* 1) 把进度落到深处，重开时才有"落位 + 续排 + preserve 补偿"这一串程序自己写的 scrollTop */
     await openBookRow('手动本');
-    await sleep(500);
     var el6 = id('reader-body');
-    /* 一路往上滑到顶 → 触发「接上一章」→ preserve() 会自己写 scrollTop，全程没有人为滚动 */
-    el6.scrollTop = 0;
+    el6.scrollTop = 1500;
     el6.dispatchEvent(new Event('scroll'));
-    await sleep(1800);
-    var paused = window.__reader().autoPaused;
-    rec('C6 没人滑的时候不该进「让位暂停」（程序化滚动不算人滑）', !paused,
-      { 上滑接章之后暂停标志: paused, 挂着哪几章: window.__reader().blocks.map(function (b) { return b.idx; }) });
+    await sleep(900);                       // saveProgress 有 400ms 防抖
+    await backToShelf();
+
+    /* 2) 开着自动翻页重开，从落位那一刻就开始采样：它自己在滚，且全程不该进让位暂停 */
+    await openBookRow('手动本');
+    tap(id('btn-set'));
+    await sleep(300);
+    tap(id('rs-auto'));
+    await sleep(200);
+    var t6 = Date.now(), 采样 = [], 起点 = el6.scrollTop;
+    while (Date.now() - t6 < 2600) {
+      采样.push(window.__reader().autoPaused ? 1 : 0);
+      await sleep(120);
+    }
+    var 自己滚了 = el6.scrollTop > 起点 + 20;
+    var 出现过暂停 = 采样.indexOf(1) >= 0;
+
+    /* 3) 控制组：手指按下去（真机上"人在动"最确定的信号）→ 必须让位。
+          这里不用"写 scrollTop + 发 scroll 事件"当控制组：自动翻页每帧都在往前推 1~2px，
+          那点位移落在 2px 容差里，归因会输给它 —— 验不到想要的东西。 */
+    var tev = new Event('touchstart', { bubbles: true });
+    tev.changedTouches = [{ clientX: 200, clientY: 400 }];
+    el6.dispatchEvent(tev);
+    var 人按之后暂停 = window.__reader().autoPaused;
+
+    rec('C6 程序化滚动不算人滑，人按屏幕才算（两侧都验，避免空断言）',
+      自己滚了 && !出现过暂停 && 人按之后暂停,
+      { 重开后自动翻页自己在滚: 自己滚了, 落位期间出现过让位暂停: 出现过暂停, 控制组_手指按下之后确实暂停: 人按之后暂停 });
+    tap(id('sp-exit'));
+    await sleep(400);
     await backToShelf();
   }
 
