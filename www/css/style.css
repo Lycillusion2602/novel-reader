@@ -175,15 +175,13 @@ input, textarea { outline: none; }
 .continue-card {
   flex: none;
   position: relative;
-  /* ⚠️ 用 align-self 而不是 width:100%。
-     .shelf-stage 是 align-items:center 的列容器，里面宽度:100% 的元素
-     会把容器的**内容宽度**撑开，于是整条便签顶到屏幕两边、比书架还宽。
-     align-self:stretch 才是"跟容器可用宽度一样宽"。
-     再左右各收 10px，让它读起来像贴在架子上的一张签，而不是顶格的一条横幅。 */
-  align-self: stretch;
-  /* 左右多留一点（跟下面那个圆架子的直径不完全等宽），
-     让它读起来是"架子上贴的一张签"，不是顶格的一条横幅 */
-  margin: 0 26px 4px;
+  /* ⚠️ align-self:center + 跟架子同宽，不用 width:100%、也不用 stretch 撑满舞台。
+     以前这张卡比圆架子宽出一截，两张东西各摆各的对不齐，首页就显散。
+     现在吃 ensureSquareCanvas() 算出来的 --shelfSide，卡片右边正好压在架子边缘上。 */
+  align-self: center;
+  width: var(--shelfSide, 86%);
+  max-width: 100%;
+  margin: 0 0 8px;
   display: flex;
   align-items: stretch;
   padding: 0;
@@ -255,27 +253,32 @@ input, textarea { outline: none; }
 }
 
 /* ---------- 书架舞台 ----------
-   书架是圆的，天生是正方形；手机屏比它高得多，怎么都会剩出空白。
-   所以不跟它较劲，改成：把「架子 + 下面那行提示」当成一组，整组垂直居中，
-   上方留白 = 下方留白，看上去是「有意留的」，而不是「下面空了一块」。
-   canvas 用 aspect-ratio 钉成正方形，宽度优先，高度不够时（横屏）自动缩。 */
+   架子是圆的，天生是正方形；手机屏比它高得多，怎么都会剩出空白。
+   所以不跟它较劲，改成：把「卡片 + 架子 + 下面那一行」当成一组，整组垂直居中，
+   上方留白 ≈ 下方留白，看上去是"有意留的"，而不是"下面空了一块"。
+
+   ⚠️ 边长由 app.js 的 ensureSquareCanvas() 现量现算写进来（宽高都吃同一个值）。
+      原来只写 `width:100%; aspect-ratio:1/1; flex:0 1 auto`，实测盒子是 845×552 ——
+      同一列里卡片和提示要占高度，flex 就把这个盒子**压扁**了（宽度是 100% 定死的），
+      而 SVG 按短边居中缩放，于是圆缩到屏宽 65% 左右、左右各留一大块空，
+      整页看着"东西没摆完就掉了"。她这次说的书架不美化，根子是这一条。 */
 .shelf-stage {
+  /* --shelfSide 由 app.js 现量现算后写进来（没写之前卡片用 86% 兜底） */
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px 14px 0;
+  padding: 6px 12px 2px;
 }
 .shelf-canvas {
-  width: 100%;
+  flex: none;
+  width: 100%;               /* JS 没跑之前的兜底 */
+  max-width: 100%;
   max-height: 100%;
   aspect-ratio: 1 / 1;
-  flex: 0 1 auto;
-  /* 兜底：万一某个 WebView 不认 aspect-ratio，canvas 会高度塌成 0，架子就整个看不见了。
-     给个最小高度，宁可小一号也不能消失。 */
-  min-height: 240px;
+  min-height: 240px;         /* 万一 WebView 不认 aspect-ratio，也别让整个架子消失 */
 }
 .shelf-canvas svg.bogu {
   width: 100%;
@@ -286,13 +289,21 @@ input, textarea { outline: none; }
 .shelf-canvas .bk { cursor: pointer; }
 .shelf-canvas .bk:active { opacity: .7; }
 
-.shelf-tip {
+/* 架子下面那一行：提示 + 花名册并排，不再各占一行 */
+.shelf-foot {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 4px 12px 10px;
+  min-height: 34px;
+}
+.shelf-tip {
+  flex: 0 1 auto;
   text-align: center;
   font-size: 12px;
   color: #9A9A95;
-  padding: 8px 16px 0;
-  min-height: 26px;
   line-height: 1.4;
 }
 
@@ -300,8 +311,7 @@ input, textarea { outline: none; }
    以后要做成架子前面那张小桌上的册子，先给个能用的入口。 */
 .roster-btn {
   flex: none;
-  margin: 4px auto 8px;
-  padding: 6px 18px;
+  padding: 5px 16px;
   font-size: 12.5px;
   letter-spacing: 1px;
   color: #2E6B4A;
@@ -1153,7 +1163,10 @@ html.native .tabbar { padding-bottom: 22px; }
 /* ---------- 自动翻页的小胶囊（右下角：点在那个速度面板上） ----------
    ⚠️ 显隐用 opacity + pointer-events，别用 display —— display 切换会让按钮
       重新参与布局，下面的正文要跟着重排一次。
-   ⚠️ 位置压在底栏上方（比底栏再高一点），栏收起来（bars-off）时跟着藏。 */
+   ⚠️ 栏收起来时它**不许跟着藏**：自动翻页开着的时候两条栏是收着的（见 app.js
+      syncBarsForAutoPage），这枚胶囊就是叫回速度面板的唯一入口。
+      以前 bars-off 把它一起藏掉，结果就是"开着自动翻页既没提示也调不了速"。
+      现在反过来：栏一收，它落到栏原来占的那一段，位置更好点。 */
 .ap-pill {
   position: absolute;
   right: 14px;
@@ -1167,11 +1180,11 @@ html.native .tabbar { padding-bottom: 22px; }
   font-size: 13px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity .2s;
+  transition: opacity .2s, bottom .22s ease;
 }
 .ap-pill.on { opacity: 1; pointer-events: auto; }
 .ap-pill b { color: var(--fg); font-weight: 500; font-variant-numeric: tabular-nums; }
-.bars-off .ap-pill { opacity: 0; pointer-events: none; }
+.bars-off .ap-pill { bottom: calc(var(--safeB) + 18px); }
 
 /* ---------- 自动翻页的速度面板 ----------
    ⚠️ 一开始我把它做成了深色（#17181a 写死），结果夜间/青灰主题下跟别的面板

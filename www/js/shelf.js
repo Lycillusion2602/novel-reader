@@ -580,10 +580,15 @@
         '<linearGradient id="plankG" x1="0" y1="0" x2="0" y2="1">' +
           '<stop offset="0" stop-color="#FFFFFF"/><stop offset="0.62" stop-color="#FBFCFA"/>' +
           '<stop offset="1" stop-color="#EDF1ED"/></linearGradient>' +
-        '<filter id="ringSh" x="-14%" y="-14%" width="128%" height="132%">' +
-          '<feDropShadow dx="0" dy="6" stdDeviation="9" flood-color="#96A79A" flood-opacity="0.42"/></filter>' +
-        '<filter id="boguBlur" x="-25%" y="-25%" width="150%" height="160%">' +
-          '<feGaussianBlur stdDeviation="1.6"/></filter>' +
+        /* 外圈那道投影：以前是 feDropShadow(stdDeviation=9)，里面板缝的阴影是
+           feGaussianBlur —— 两个滤镜都要把整块 400×400 栅格化一遍再模糊，
+           手机上首页每次重画都付这个钱（她说的"很多地方卡"里就有这一笔）。
+           圆形的投影其实用一圈径向渐变就能做出来，边缘一样是软的，代价低得多。 */
+        '<radialGradient id="ringShadow" cx="0.5" cy="0.5" r="0.5">' +
+          '<stop offset="0.70" stop-color="#96A79A" stop-opacity="0.38"/>' +
+          '<stop offset="0.88" stop-color="#96A79A" stop-opacity="0.16"/>' +
+          '<stop offset="1" stop-color="#96A79A" stop-opacity="0"/>' +
+        '</radialGradient>' +
         '<clipPath id="boguInner"><circle cx="' + cx + '" cy="' + cy + '" r="' + R + '"/></clipPath>' +
         /* 书脊的圆柱明暗：两侧压暗、偏左一道高光。用 objectBoundingBox（默认），
            所以一个渐变能给所有宽度不同的书脊复用。 */
@@ -596,11 +601,16 @@
           '<stop offset="1" stop-color="#000000" stop-opacity="0.32"/>' +
         '</linearGradient>' +
       '</defs>' +
-      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + cfg.ring) + '" fill="url(#ringG)" filter="url(#ringSh)"/>' +
+      /* 投影：一圈比外环大一号的径向渐变，往下偏 7 —— 视觉上就是 feDropShadow 那个效果 */
+      '<ellipse cx="' + cx + '" cy="' + (cy + 7) + '" rx="' + (R + cfg.ring + 16) + '" ry="' + (R + cfg.ring + 13) + '" fill="url(#ringShadow)"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + cfg.ring) + '" fill="url(#ringG)"/>' +
       '<circle cx="' + cx + '" cy="' + cy + '" r="' + (R + 1.5) + '" fill="none" stroke="#A9B7AC" stroke-width="7" opacity="0.28"/>' +
       '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" fill="url(#backG)"/>' +
       '<g clip-path="url(#boguInner)">' +
-        '<g filter="url(#boguBlur)" opacity="0.42"><g fill="#7E9484" transform="translate(1.7,3.4)">' + inner.body + '</g></g>' +
+        /* 板子落在背板上的阴影：两层偏移的实心副本叠出一点"虚"的感觉，
+           不再挂 feGaussianBlur（同样是栅格化的钱）。 */
+        '<g fill="#7E9484" opacity="0.16"><g transform="translate(2.6,5.2)">' + inner.body + '</g></g>' +
+        '<g fill="#7E9484" opacity="0.20"><g transform="translate(1.3,2.6)">' + inner.body + '</g></g>' +
         '<g fill="url(#plankG)">' + inner.body + '</g>' +
         '<g fill="#FFFFFF" opacity="0.9">' + inner.hi + '</g>' +
         under + content + over +

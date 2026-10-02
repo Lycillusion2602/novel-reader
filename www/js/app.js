@@ -20,11 +20,16 @@
          覆盖 = 新内容从下往上滑上来   上下 = 直接跳（默认，最省）
          仿真 = 带透视的立体翻一下     平滑 = 平滑滚过去（不瞬间跳） */
     pageTurn: 'vscroll',
-    autoPage: false,      // 自动翻页：匀速往下滚（速度可调）
     autoSpeed: 19         // 自动翻页速度：数值 ×4 = 每秒滚多少像素（19 ≈ 76px/s）
+    /* ⚠️ 这里**故意没有 autoPage**。它是"这本书要不要自己滚"，按书记在进度里
+       （见 setAutoPage），不是全局偏好。放进 DEFAULTS 就会被启动时那次回填捞回来，
+       变成"A 书开着、B 书也开着"——正是她要改掉的行为。
+       老版本在 settings 里可能留着一行 autoPage=true，因为不在 DEFAULTS 里，
+       init 的 `if (k in state.settings)` 那道筛子会直接把它忽略掉，不用迁移。 */
   };
   /* ⚠️ 只有"设置"能进 DEFAULTS（会被存进库并在启动时回填）。
-     像"目录倒着排""现在是不是全屏"这种一次性的界面状态放在 state 里，别混进来。 */
+     像"目录倒着排""现在是不是全屏""这本书开没开自动翻页"这种，
+     要么放 state 里，要么按书记进进度，别混进来。 */
 
   /* 字体族。安卓 WebView 里 serif 会落到 Noto Serif CJK，mono 落到等宽。
      ⚠️ 但很多机型压根没装中文衬线/等宽字体，切过去会静默回落到同一个黑体 ——
@@ -627,12 +632,36 @@
   }
   function rafAuto() { return requestAnimationFrame(autoTick); }
 
-  /* 自动翻页的开关口：只有这两处负责状态与那枚胶囊，别在别处偷偷改 class */
+  /* 自动翻页的开关口：只有这几处负责状态、那枚胶囊和两条栏，别在别处偷偷改 class。
+     ⭐ 「开自动翻页」必然带着"把上下两条栏收起来" —— 匀速滚的时候那两条栏是干扰。
+        以前它收不起来有个很隐蔽的原因：栏的自动收起是靠滚动方向判的，
+        而那段判据第一行是 `if (Math.abs(dy) < 6) return;`（抖一下不算方向），
+        速度 19 一帧才走 1.3 像素，永远够不到这道门槛 → 一次都没收过。
+        所以这里不指望方向判定，开就收、关就放。 */
+  function syncBarsForAutoPage() {
+    if (state.settings.autoPage) setAutoHidden(true);
+    else if (!state.imersed) setAutoHidden(false);
+  }
+
+  /* ⭐ 自动翻页是**按书**记的（存在这本书的进度里），不是全局设置：
+     在 A 书开着，去看 B 书不该跟着自己滚 —— 这是她要的第二条。
+     速度 autoSpeed 仍然全局（那是"多快"的偏好，不是"要不要"的开关）。
+     ⚠️ 老版本把它存在 settings 里，init 那道"按 DEFAULTS 回填"会把 true 捞回来，
+        所以下面 NOT_PERSISTED 里必须把它挡掉，不然改了等于没改。 */
+  function setAutoPage(on) {
+    state.settings.autoPage = !!on;
+    syncReadSet();
+    if (state.settings.autoPage) startAutoPage();
+    else stopAutoPage(false);
+    saveProgress();                 // 落进这本书的进度，不写全局设置
+  }
+
   function openSpeed() {
     if (!state.settings.autoPage) return;
     syncSpeedPanel();
     $('sheet-speed').classList.add('open');
-    setAutoHidden(false);
+    /* 不再 setAutoHidden(false)：自动阅读开着时两条栏就该一直收着。
+       要调速度有这面板；要回目录/设置，按面板上那个「退出自动翻页」。 */
   }
   function closeSpeed() { $('sheet-speed').classList.remove('open'); }
 
@@ -640,16 +669,19 @@
     if (!state.settings.autoPage) return;
     autoLast = 0;
     if (!autoRaf) autoRaf = rafAuto();
-    /* ⚠️ 开了就夸 own 把速度面板弹出来是错的 —— 她明确要"点了之后两个面板都消失，
+    /* ⚠️ 开了就把速度面板弹出来是错的 —— 她明确要"点了之后两个面板都消失，
        要调的时候再点才出来"。面板改由右下角那枚小胶囊（或设置里那一行）叫回来。 */
     syncSpeedPanel();
     updateAutoPill(true);
+    syncBarsForAutoPage();
   }
   /* finished = 真读完了（到底且没有下一章）才提示；中途退出不啰嗦 */
   function stopAutoPage(finished) {
     if (autoRaf) { cancelAnimationFrame(autoRaf); autoRaf = 0; }
     closeSpeed();
     updateAutoPill(false);
+    /* 关了就把栏放回来（离开阅读页时不必管 —— 那两条栏只在阅读页存在） */
+    if (state.page === 'reader') syncBarsForAutoPage();
     if (finished) toast('已经读完了');
   }
 
@@ -763,23 +795,32 @@
   }
 
   /* ---------------- 书架 ---------------- */
-  /* ---------------- 老引擎兜底 ----------------
-     .shelf-canvas 靠 aspect-ratio:1/1 撑成正方形。这是 Chrome 88+ 的属性，
-     老一点的 WebView 不认，高度会算成 0 —— 整个架子直接消失。
-     这里量一下，发现塌了就按宽度手动补一个正方形高度（不超舞台可用高）。 */
+  /* ---------------- 架子必须是正方形（顺手把首页排布也定在这） ----------------
+     ⚠️ 这条是实测逼出来的：原来 CSS 只写 `width:100%; aspect-ratio:1/1; flex:0 1 auto`，
+        而同一列里"继续阅读"卡片和下面那行提示要占高度 —— flex 会把这个盒子**压扁**
+        （宽度被 width:100% 定死，只有高度能缩），量出来是 845×552。
+        SVG 按短边居中缩放，于是圆架子缩到屏宽 65% 左右、左右各留一大块空，
+        整页看着"东西没摆完就掉了"—— 她说书架不美化，根子是这一条。
+     现在边长在这儿现量现算，宽、高吃同一个值，永远正方；
+     同时把边长写进 --shelfSide，让卡片跟架子对齐（CSS 用 var() 接）。
+     老 WebView 不认 aspect-ratio 时，这里设的显式宽高就是它的兜底，比原来只补高度更稳。 */
   function ensureSquareCanvas() {
-    var c = document.querySelector('.shelf-canvas');
-    if (!c) return;
-    var r = c.getBoundingClientRect();
-    if (r.width < 10) return;
     var stage = document.querySelector('.shelf-stage');
-    var maxH = stage ? stage.clientHeight - 34 : r.width;
-    if (r.height < r.width * 0.6) {
-      // 没撑起来：手动补一个正方形，但别超过舞台高度
-      c.style.height = Math.round(Math.min(r.width, Math.max(160, maxH))) + 'px';
-    } else if (c.style.height) {
-      c.style.height = '';   // 引擎认 aspect-ratio 了，别留着手动值
-    }
+    var c = document.querySelector('.shelf-canvas');
+    if (!stage || !c) return;
+    var card = $('btn-continue'), foot = document.querySelector('.shelf-foot');
+    var used = 0;
+    if (card && card.style.display !== 'none') used += card.offsetHeight + 8;
+    if (foot) used += foot.offsetHeight + 8;
+    var st = getComputedStyle(stage);
+    var availW = stage.clientWidth - (parseFloat(st.paddingLeft) || 0) - (parseFloat(st.paddingRight) || 0);
+    var availH = stage.clientHeight - used - (parseFloat(st.paddingTop) || 0) - (parseFloat(st.paddingBottom) || 0);
+    var side = Math.floor(Math.min(availW, availH));
+    if (side < 200) side = Math.max(200, Math.floor(availW));   // 极扁的横屏：宁可顶出去一点，也别把架子缩没
+    c.style.width = side + 'px';
+    c.style.height = side + 'px';
+    c.style.maxHeight = 'none';        // 显式边长定好了，别让 max-height 再把它压一次
+    stage.style.setProperty('--shelfSide', side + 'px');
   }
 
   /* ---------------- 隐藏的诊断面板 ----------------
@@ -1484,6 +1525,11 @@
       return DB.getProgress(id).then(function (p) {
         state.index = p && typeof p.index === 'number' ? p.index : 0;
         state.mark = p && p.mark ? p.mark : null;
+        /* 自动翻页按书恢复：上一本开着不会带进这一本（她要的第二条）。
+           放在这里而不是启动时读全局设置，所以 openBook 后面那句
+           `if (state.settings.autoPage) startAutoPage()` 才是"这本书自己的状态"。 */
+        state.settings.autoPage = !!(p && p.autoPage);
+        syncReadSet();
         $('reader-title').textContent = b.title;
         $('btn-bookmark').classList.toggle('on', !!state.mark);
         showPage('reader');
@@ -2009,7 +2055,7 @@
          就**立刻定位、立刻收遮罩**；剩下的交给后台续排（startFill），
          每补一片位置就往目标推一次，参考线上那一行保持不动。 */
       finishBlock(blk);                // 小章（首批就排完）在这儿挂「本章完」
-      setAutoHidden(false);            // 换章一律把栏放出来
+      syncBarsForAutoPage();       // 换章一律把栏放出来（自动翻页开着则保持收起）
       markTocCurrent();
 
       requestAnimationFrame(function () {
@@ -2276,7 +2322,7 @@
     if (!el) return;
     var p = paged();
     el.classList.toggle('paged', p);
-    setAutoHidden(false);      // 分页模式下栏不许自动收（页码得一直看得见）
+    syncBarsForAutoPage();  // 分页模式下栏不许自动收（页码得一直看得见）；自动翻页开着则反过来收着
     /* ⚠️ 分页模式下"一页"必须是**完整看得见**的一屏：正文的上下留白得让开
        顶栏和底栏 —— 它们是浮层、不占布局高。不让开的话页首那行会被顶栏压掉
        一半（截图里"第 11 段"那行被切就是这么来的），页尾同理被底栏吃掉。
@@ -2478,6 +2524,8 @@
       index: a.blk.idx,
       scrollY: Math.max(0, Math.round(a.voff)),
       mark: state.mark,
+      /* 自动翻页按书记：这本书开着，下次点开还是开着；换一本就是干净的 */
+      autoPage: !!state.settings.autoPage,
       updatedAt: Date.now()
     });
   }
@@ -2602,13 +2650,15 @@
     state.tocAnchor = null;                 // 打开时以"正在读的那一章"为中心
     renderToc();
     $('drawer-toc').classList.add('open');
-    requestAnimationFrame(function () {
-      syncTocBar();
-      var cur = $('toc-list').querySelector('.toc-item.cur');
-      /* 一打开就滚到当前章：几千章的书，不这么做翻到目录只能看见开头 */
-      if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: 'center' });
-      syncTocBar();
-    });
+    tocGeoDirty();                          // 刚显示，之前量的一律不算
+    /* 一打开就滚到当前章：几千章的书，不这么做翻到目录只能看见开头。
+       ⚠️ 原来这里用的是 scrollIntoView({block:'center'}) —— 它会把整条列表
+       连同抽屉一起逼一次布局，而且还得在下一帧再同步一次滚动条。
+       现在按 offsetTop 直接算出来、一次写完，少两道强制排版。 */
+    var list = $('toc-list');
+    var cur = list.querySelector('.toc-item.cur');
+    if (cur) list.scrollTop = Math.max(0, cur.offsetTop - list.clientHeight / 2);
+    syncTocBar();
   }
   function closeToc() { $('drawer-toc').classList.remove('open'); }
 
@@ -2692,6 +2742,7 @@
       box.appendChild(info);
     }
     markTocCurrent();
+    tocGeoDirty();          // 列表内容换了，能滚多远要重量一次
     syncTocBar();
   }
 
@@ -2712,18 +2763,29 @@
     return d;
   }
 
-  /* ---------- 右侧悬浮的胶囊滚动条 ---------- */
+  /* ---------- 右侧悬浮的胶囊滚动条 ----------
+     ⚠️ 这个函数**每个滚动事件都要跑一次**，而它原来一口气读四个几何量
+        （scrollHeight、clientHeight×2、offsetHeight），每一个都会逼浏览器立刻排版。
+        实测：拖一次目录滑块每帧 4.4 次强制排版、目录里滚一下每帧 6 次 ——
+        这就是她说"目录的滑块很卡"的来源（目录越长越明显）。
+        现在 max / usable 缓存起来，只在目录重画、面板开合、转屏、滑块换尺寸时作废，
+        每帧只读一个 scrollTop；正在拖滑块的时候直接返回（那一帧的位置是拖动自己算的）。 */
+  var tocGeo = { max: -1, usable: -1 };
+  function tocGeoDirty() { tocGeo.max = -1; tocGeo.usable = -1; }
   function syncTocBar() {
     var list = $('toc-list');
     var sbar = $('toc-sbar');
-    var max = list.scrollHeight - list.clientHeight;
-    if (max <= 4) { sbar.classList.add('hide'); return; }   // 短到不用滚就不出现
-    sbar.classList.remove('hide');
     var track = $('sb-track'), th = $('sb-thumb');
-    var usable = track.clientHeight - th.offsetHeight;
-    if (usable <= 0) return;
-    var p = Math.max(0, Math.min(1, list.scrollTop / max));
-    th.style.top = (usable * p).toFixed(1) + 'px';
+    if (th.classList.contains('drag')) return;         // 拖动中：dragify 已经把两边都写好了
+    if (tocGeo.max < 0) {
+      tocGeo.max = list.scrollHeight - list.clientHeight;
+      tocGeo.usable = track.clientHeight - th.offsetHeight;
+    }
+    if (tocGeo.max <= 4) { sbar.classList.add('hide'); return; }   // 短到不用滚就不出现
+    sbar.classList.remove('hide');
+    if (tocGeo.usable <= 0) return;
+    var p = Math.max(0, Math.min(1, list.scrollTop / tocGeo.max));
+    th.style.top = (tocGeo.usable * p).toFixed(1) + 'px';
   }
 
   /* ================== 拖动器（两条滑动条共用） ==================
@@ -2809,8 +2871,9 @@
   function bindTocBar() {
     var list = $('toc-list'), track = $('sb-track'), th = $('sb-thumb');
 
-    /* ⚠️ 目录滚动本身也会触发 scroll 事件，而 syncTocBar 要读 4 个几何量 ——
-       不节流的话，拖一次滑块 = 每帧多好几次强制排版。攒到下一帧做一次。 */
+    /* 目录滚动会触发 scroll 事件 → syncTocBar。
+       几何量已经缓存了（见 syncTocBar 那段注释），每帧只剩一次 scrollTop 读；
+       再叠一层 rAF，一帧最多做一次。 */
     var raf = 0;
     list.addEventListener('scroll', function () {
       if (raf) return;
@@ -2831,14 +2894,16 @@
           max: Math.max(0, list.scrollHeight - list.clientHeight)
         };
       },
-      start: function () { th.classList.add('drag'); },
+      /* 按下/抬起都要把缓存作废：滑块 .drag 时是 34px、平时 30px，
+         不换一次的话松手后滑块会停在一个偏掉的位置。 */
+      start: function () { tocGeoDirty(); th.classList.add('drag'); },
       move: function (y, g) {
         var p = Math.max(0, Math.min(1, (g.top0 + (y - g.y0)) / g.usable));
         list.scrollTop = p * g.max;
         /* 滑块自己也要跟手 —— 不等 scroll 回调那一帧，不然拖着会有滞后感 */
         th.style.top = (g.usable * p).toFixed(1) + 'px';
       },
-      end: function () { th.classList.remove('drag'); }
+      end: function () { th.classList.remove('drag'); tocGeoDirty(); syncTocBar(); }
     });
   }
 
@@ -3015,9 +3080,8 @@
        关掉是速度面板里那个「退出自动翻页」的活。两种手势分手，别再抢一块地方。 */
     $('rs-auto').onclick = function () {
       if (state.settings.autoPage) { openSpeed(); return; }
-      saveSetting('autoPage', true);
-      closeReadSet();            // 开了就把设置面板收掉：它已经挡着正文了
-      startAutoPage();
+      setAutoPage(true);          // 按书记 + 收两条栏（见 setAutoPage / syncBarsForAutoPage）
+      closeReadSet();             // 开了就把设置面板收掉：它已经挡着正文了
     };
     $('rs-more').onclick = function () { closeReadSet(); openSet(); };
     /* 那枚小胶囊：开着自动翻页时才出现，点一下把速度面板叫回来 */
@@ -3036,9 +3100,7 @@
       syncSpeedPanel();
     };
     $('sp-exit').onclick = function () {
-      saveSetting('autoPage', false);
-      stopAutoPage(false);
-      syncReadSet();
+      setAutoPage(false);         // 关掉：停滚、收胶囊、把两条栏放回来、按书记 false
     };
 
     /* 底栏四个功能键：
@@ -3159,6 +3221,11 @@
         updatePct(snap);
         saveProgressSoon();
         var top = snap.top;
+        /* ⭐ 自动翻页开着的时候，两条栏的收放由 syncBarsForAutoPage 统一管（开着就收着），
+           这里不参与 —— 否则一边匀速滚、一边被方向判定反复拨。
+           lastTop 还是要跟着更新，不然关掉自动翻页后的第一下会算出一个巨大的 dy。 */
+        state.lastTop = top;
+        if (state.settings.autoPage) return;
         if (state.imersed) return;          // 手动沉浸模式：不自动恢复
         /* ⚠️ 分页模式也一样：那里根本没有"滚动动作"，栏一收起来页码就看不见了，
            而页码正是分页最该一直摆着的信息（测试截图里底栏整条消失才发现）。 */
@@ -3185,8 +3252,11 @@
       toast('出了点问题：' + ((r && (r.message || r.name)) || String(r || '未知错误')));
     });
 
-    // 转屏 / 键盘弹出后重新量一次，别让架子高度停在旧值
-    window.addEventListener('resize', ensureSquareCanvas);
+    // 转屏 / 键盘弹出后重新量一次，别让架子高度停在旧值；目录能滚多远也变了
+    window.addEventListener('resize', function () {
+      ensureSquareCanvas();
+      tocGeoDirty();
+    });
 
     // 长按左上角「砚读」开诊断面板（正常用不会碰到，出问题时要截图用）
     (function () {

@@ -441,6 +441,39 @@ async function run() {
     { 滚到: 2400, 库里存的是: p10 ? { 章: p10.index, 章内px: Math.round(p10.scrollY) } : null, 重开读到: st10.index + '章', 重开位置: Math.round(el10.scrollTop) });
   await backToShelf();
 
+  /* ===== C12 自动翻页：开就收两条栏、胶囊仍可点；且**按书**记，不跨书带过去 ===== */
+  var barsOff = function () { return id('page-reader').classList.contains('bars-off'); };
+  var pillOn = function () { return id('ap-pill').classList.contains('on'); };
+  var pillClickable = function () { return getComputedStyle(id('ap-pill')).pointerEvents !== 'none'; };
+
+  await openBookRow('手动本');
+  var 起点 = { 栏在: !barsOff(), 胶囊: pillOn() };
+  tap(id('btn-set'));
+  await sleep(300);
+  tap(id('rs-auto'));                 // 真 UI 开自动翻页
+  await sleep(700);
+  var 开着 = { 栏收了: barsOff(), 胶囊在: pillOn(), 胶囊可点: pillClickable(), autoPage: window.__reader().autoPage };
+  tap(id('btn-back'));                // 回书架 → 换一本
+  await sleep(700);
+  await openBookRow('进度本');
+  var 换书后 = { autoPage: window.__reader().autoPage, 栏在: !barsOff(), 胶囊: pillOn() };
+  tap(id('btn-back'));
+  await sleep(700);
+  await openBookRow('手动本');        // 回到那本开着的书 → 应该按书恢复
+  await sleep(700);
+  var 回到原书 = { autoPage: window.__reader().autoPage, 栏收了: barsOff(), 胶囊在: pillOn() };
+  tap(id('sp-exit'));                 // 控制组：退出之后栏必须放回来
+  await sleep(600);
+  var 退出后 = { autoPage: window.__reader().autoPage, 栏在: !barsOff(), 胶囊: pillOn() };
+  await backToShelf();
+  rec('C12 自动翻页：开=收栏且胶囊可点、换书不带着走、回原书按书恢复、退出放回栏',
+    起点.栏在 && !起点.胶囊 &&
+    开着.栏收了 && 开着.胶囊在 && 开着.胶囊可点 && 开着.autoPage &&
+    !换书后.autoPage && 换书后.栏在 && !换书后.胶囊 &&
+    回到原书.autoPage && 回到原书.栏收了 && 回到原书.胶囊在 &&
+    !退出后.autoPage && 退出后.栏在 && !退出后.胶囊,
+    { 刚打开: 起点, 开了自动翻页: 开着, 换到另一本: 换书后, 回到原来那本: 回到原书, 退出之后: 退出后 });
+
   /* ===== C11 整轮跑下来不许有未捕获错误 ===== */
   rec('C11 全程没有未捕获的报错', window.__errs.length === 0, window.__errs.slice(0, 6));
 

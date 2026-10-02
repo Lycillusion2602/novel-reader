@@ -34,8 +34,12 @@
       <span class="cc-bar"><i id="cc-bar"></i></span>
     </button>
     <div class="shelf-canvas" id="shelf-stage"></div>
-    <div id="shelf-tip" class="shelf-tip"></div>
-    <button class="roster-btn" id="btn-roster" style="display:none">花名册</button>
+    <!-- 提示和花名册挤在同一行：以前它们各占一行，架子下面拖出两大块留白，
+         看着就像"东西没摆完就掉了"。 -->
+    <div class="shelf-foot">
+      <div id="shelf-tip" class="shelf-tip"></div>
+      <button class="roster-btn" id="btn-roster" style="display:none">花名册</button>
+    </div>
   </div>
 
   <div id="edit-bar" class="edit-bar">
