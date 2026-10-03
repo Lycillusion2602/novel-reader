@@ -6,7 +6,9 @@
   "scripts": {
     "sync": "cap sync android",
     "open": "cap open android",
-    "apk": "cd android && gradlew assembleDebug"
+    "apk": "cd android && gradlew assembleDebug",
+    "check": "node tools/check-shelf.js && node tools/check-scroll-attribution.js",
+    "check:scroll": "node tools/check-scroll-attribution.js"
   },
   "dependencies": {
     "@capacitor/app": "^8.0.0",
